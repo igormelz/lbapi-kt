@@ -30,6 +30,9 @@ class GraphQLResource(private val service: LbApiService) {
     }
 
     @Query
-    fun getAccount(@Name("sessionId") sessionId: String) = service.getAccounts(sessionId).ret
+    fun getAccount(@Name("sessionId") sessionId: String) = service.getAccounts(sessionId)
+
+    @Query
+    fun getEmailIsConfirmed(@Name("login") login: String) = service.getAccountIsEmailConfirm(login)
 
 }

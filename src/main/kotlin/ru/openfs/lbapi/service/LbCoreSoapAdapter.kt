@@ -10,6 +10,7 @@ import ru.openfs.lbapi.camel.CamelRoute.Companion.READ_SOAP_MESSAGE
 import ru.openfs.lbapi.client.LbCoreRestClient
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.exception.NotAuthorizeException
+import ru.openfs.lbapi.exception.NotfoundAccountException
 
 @ApplicationScoped
 class LbCoreSoapAdapter(
@@ -18,24 +19,26 @@ class LbCoreSoapAdapter(
 ) {
 
     fun getSessionId(request: Any): String =
-        getResponse(null, request, String::class.java).first
+        getResponseAsMandatoryType(null, request, String::class.java).first
+            ?: throw NotAuthorizeException("not return sessionId")
 
     fun getResponseAsString(sessionId: String, request: Any): String =
-        getResponse(sessionId, request, String::class.java).second
+        getResponseAsMandatoryType(sessionId, request, String::class.java).second
 
-    fun <T> getResponse(
+    fun <T> getResponseAsMandatoryType(
         sessionId: String?,
         request: Any,
         responseType: Class<T>,
-    ): Pair<String, T> {
+    ): Pair<String?, T> {
         val requestBody = producer.requestBody<String>(
             CREATE_SOAP_MESSAGE,
             request,
             String::class.java
         )
         try {
-            restClient.call(sessionId ?: "", requestBody).use { response ->
+            restClient.call(sessionId, requestBody).use { response ->
                 val responseBody = response.readEntity<String>(String::class.java)
+
                 if (response.status != 200) {
                     val err = producer.requestBody<String>(
                         PARSE_ERROR_MESSAGE,
@@ -43,10 +46,14 @@ class LbCoreSoapAdapter(
                         String::class.java
                     )
 
-                    if (err == "Client not authorized") throw NotAuthorizeException(err)
-                    throw ApiException(err)
+                    when (err) {
+                        "Client not authorized" -> throw NotAuthorizeException(err)
+                        "Account not found" -> throw NotfoundAccountException(err)
+                        else -> throw ApiException(err)
+                    }
                 }
-                return response.headers.getOrDefault("Set-Cookie", "").toString().getSessionId() to
+
+                return response.cookies["sessnum"]?.value?.getSessionId() to
                         producer.requestBody<T>(READ_SOAP_MESSAGE, responseBody, responseType)
             }
         } catch (e: RuntimeException) {
