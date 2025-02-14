@@ -14,11 +14,10 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             }
         )
 
-    fun closeSession(sessionId: String) =
-        adapter.getResponseAsString(sessionId, Logout())
+    fun closeSession(sessionId: String) = adapter.getResponseAsString(sessionId, Logout())
 
-    fun getAccounts(sessionId: String) =
-        adapter.getResponse(
+    fun getAccounts(sessionId: String): List<SoapAccountFull> =
+        adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientAccount().apply {
                 this.flt = SoapGetAccountFilter().apply {
@@ -26,6 +25,16 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
                 }
             },
             GetClientAccountResponse::class.java
-        ).second
+        ).second.ret
+
+    fun getAccountIsEmailConfirm(login: String): Boolean =
+        adapter.getResponseAsMandatoryType(
+            null,
+            GetInfoAboutAccountDataConfirm().apply {
+                this.accountlogin = login
+            },
+            SoapInfoAboutAccountDataConfirmResponse::class.java
+        ).second.isEmailisconfirmed
+
 
 }

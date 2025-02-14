@@ -11,3 +11,8 @@ class ApiException: RuntimeException {
 class NotAuthorizeException: RuntimeException {
     constructor(message: String) : super(message)
 }
+
+@ErrorCode("E3002")
+class NotfoundAccountException: RuntimeException {
+    constructor(message: String) : super(message)
+}
