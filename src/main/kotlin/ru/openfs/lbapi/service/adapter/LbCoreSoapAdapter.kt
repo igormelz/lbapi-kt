@@ -1,12 +1,10 @@
-package ru.openfs.lbapi.service
+package ru.openfs.lbapi.service.adapter
 
 import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import org.apache.camel.ProducerTemplate
 import org.eclipse.microprofile.rest.client.inject.RestClient
-import ru.openfs.lbapi.camel.CamelRoute.Companion.CREATE_SOAP_MESSAGE
-import ru.openfs.lbapi.camel.CamelRoute.Companion.PARSE_ERROR_MESSAGE
-import ru.openfs.lbapi.camel.CamelRoute.Companion.READ_SOAP_MESSAGE
+import ru.openfs.lbapi.camel.CamelRoute
 import ru.openfs.lbapi.client.LbCoreRestClient
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.exception.NotAuthorizeException
@@ -31,7 +29,7 @@ class LbCoreSoapAdapter(
         responseType: Class<T>,
     ): Pair<String?, T> {
         val requestBody = producer.requestBody<String>(
-            CREATE_SOAP_MESSAGE,
+            CamelRoute.Companion.CREATE_SOAP_MESSAGE,
             request,
             String::class.java
         )
@@ -41,7 +39,7 @@ class LbCoreSoapAdapter(
 
                 if (response.status != 200) {
                     val err = producer.requestBody<String>(
-                        PARSE_ERROR_MESSAGE,
+                        CamelRoute.Companion.PARSE_ERROR_MESSAGE,
                         responseBody,
                         String::class.java
                     )
@@ -54,7 +52,7 @@ class LbCoreSoapAdapter(
                 }
 
                 return response.cookies["sessnum"]?.value?.getSessionId() to
-                        producer.requestBody<T>(READ_SOAP_MESSAGE, responseBody, responseType)
+                        producer.requestBody<T>(CamelRoute.Companion.READ_SOAP_MESSAGE, responseBody, responseType)
             }
         } catch (e: RuntimeException) {
             Log.error(e.message)

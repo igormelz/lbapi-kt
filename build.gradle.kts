@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.0.21"
-    kotlin("plugin.allopen") version "2.0.21"
+    kotlin("jvm") version "2.1.10"
+    kotlin("plugin.allopen") version "2.1.10"
     id("io.quarkus")
     id("com.github.bjornvester.wsdl2java") version "2.0.2"
 }
@@ -23,10 +23,12 @@ dependencies {
     implementation("io.quarkus:quarkus-rest-client")
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
     implementation("io.quarkus:quarkus-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    //implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("io.quarkus:quarkus-arc")
     implementation("io.quarkus:quarkus-smallrye-graphql")
     implementation("org.apache.camel.quarkus:camel-quarkus-xpath")
+    implementation("io.quarkus:quarkus-rest-client-jackson")
+    //implementation("io.quarkus:quarkus-rest-kotlin-serialization")
     testImplementation("io.quarkus:quarkus-junit5")
 }
 
