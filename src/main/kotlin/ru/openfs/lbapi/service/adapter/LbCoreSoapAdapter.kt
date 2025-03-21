@@ -9,6 +9,7 @@ import ru.openfs.lbapi.client.LbCoreRestClient
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.exception.NotAuthorizeException
 import ru.openfs.lbapi.exception.NotfoundAccountException
+import ru.openfs.lbapi.exception.PromisePaymentNotAllowedException
 
 @ApplicationScoped
 class LbCoreSoapAdapter(
@@ -45,6 +46,7 @@ class LbCoreSoapAdapter(
                     )
 
                     when (err) {
+                        "Promise payments already assigned" -> throw PromisePaymentNotAllowedException(err)
                         "Client not authorized" -> throw NotAuthorizeException(err)
                         "Account not found" -> throw NotfoundAccountException(err)
                         else -> throw ApiException(err)

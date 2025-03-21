@@ -16,3 +16,8 @@ class NotAuthorizeException: RuntimeException {
 class NotfoundAccountException: RuntimeException {
     constructor(message: String) : super(message)
 }
+
+@ErrorCode("E3003")
+class PromisePaymentNotAllowedException: RuntimeException {
+    constructor(message: String) : super(message)
+}

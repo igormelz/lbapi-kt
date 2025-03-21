@@ -36,7 +36,7 @@ class GraphQLResource(
     }
 
     @Query
-    fun getAccount(@Name("sessionId") sessionId: String) = service.getAccounts(sessionId)
+    fun getAccounts(@Name("sessionId") sessionId: String) = service.getAccounts(sessionId)
 
     @Query
     fun getEmailIsConfirmed(@Name("login") login: String) = service.getAccountIsEmailConfirm(login)
@@ -64,5 +64,55 @@ class GraphQLResource(
     }
 
     @Query
-    fun verifyCode(@Name("code") code: String) = googleReCaptchaClient.verifyToken(code).success
+    fun verifyCode(@Name("code") code: String) =
+        googleReCaptchaClient.verifyToken(code).success
+
+    @Query
+    fun getPasswordTemplate(@Name("sessionId") sessionId: String) =
+        service.getPassTemplate(sessionId)
+
+    @Mutation
+    fun updatePassword(
+        @Name("sessionId") sessionId: String,
+        @Name("oldPass") oldPass: String,
+        @Name("newPass") newPass: String
+    ) = service.updatePassword(sessionId, oldPass, newPass)
+
+    @Query
+    fun getAccountNotices(@Name("sessionId") sessionId: String) =
+        service.getAccountNotices(sessionId)
+
+    @Query
+    fun getSharedPosts(@Name("sessionId") sessionId: String) =
+        service.getSharedPosts(sessionId)
+
+    @Query
+    fun getSharedPostsCat(@Name("sessionId") sessionId: String) =
+        service.getSharedPostsCategories(sessionId)
+
+    @Query
+    fun getAccountSharedPostsCat(@Name("sessionId") sessionId: String) =
+        service.getAccountSharedPostsCategories(sessionId)
+
+    @Query
+    fun getClientInfo(@Name("sessionId") sessionId: String) =
+        service.getClientInfo(sessionId)
+
+    @Query
+    fun getClientVGroups(@Name("sessionId") sessionId: String) = service.getClientVGroup(sessionId)
+
+    @Query
+    fun getAgreementInfo(@Name("sessionId") sessionId: String) = service.getAgreementInfo(sessionId)
+
+    @Query
+    fun getRecommendedPayment(
+	@Name("sessionId") sessionId: String, 
+	@Name("agreementId") agreementId: Long
+    ) = service.getRecommendedPayment(sessionId, agreementId)
+
+    @Query
+    fun getPromiseSettings(
+	@Name("sessionId") sessionId: String,
+	@Name("agreementId") agreementId: Long
+    ) = service.getClientPromiseSettings(sessionId, agreementId)
 }
