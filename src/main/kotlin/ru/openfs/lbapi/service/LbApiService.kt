@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.service
 
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.exception.ApiException
@@ -9,6 +10,18 @@ import java.time.LocalDate
 
 @ApplicationScoped
 class LbApiService(private val adapter: LbCoreSoapAdapter) {
+
+    fun isApiReady(): Boolean {
+        try {
+            return adapter.getResponseAsMandatoryType(
+                null,
+                GetVersion(),
+                TVersion::class.java
+            ).second.version.isNotEmpty()
+        } catch (_: ApiException) {
+            return false
+        }
+    }
 
     fun startSession(login: String, password: String) =
         adapter.getSessionId(
@@ -77,17 +90,17 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             UpdatePasswordByTokenResponse::class.java
         ).second.ret
 
-    private fun getOptionByName(sessionId: String, optionName: String? = "pass_length"): Short? =
+    private fun getOptionByName(sessionId: String, optionName: String? = "pass_length"): SoapOption? =
         adapter.getResponseAsMandatoryType(
             sessionId,
             GetOptionByName().apply {
                 this.name = optionName
             },
             GetOptionByNameResponse::class.java
-        ).second.ret.firstOrNull()?.availabilitytype
+        ).second.ret.firstOrNull()
 
     fun getPassTemplate(sessionId: String): PasswordTemplate {
-        if (getOptionByName(sessionId)?.toInt() != 0) throw ApiException("not allowed")
+        if (getOptionByName(sessionId)?.availabilitytype?.toInt() != 0) throw ApiException("not allowed")
 
         return adapter.getResponseAsMandatoryType(
             sessionId,
@@ -174,7 +187,18 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             GetClientInfoResponse::class.java
         ).second.ret.first()
 
-    fun getClientVGroup(sessionId: String): List<SoapClientVgroupFull> =
+    fun getClientVGroupByAgreement(sessionId: String, agreementId: Long): List<SoapClientVgroupFull> =
+        adapter.getResponseAsMandatoryType(
+            sessionId,
+            GetClientVgroups().apply {
+                this.flt = SoapFilter().apply {
+                    this.agrmid = agreementId
+                }
+            },
+            GetClientVgroupsResponse::class.java
+        ).second.ret
+
+    fun getClientVGroups(sessionId: String): List<SoapClientVgroupFull> =
         adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientVgroups(),
@@ -184,21 +208,34 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
     // get rec payment by agreementId
     fun getRecommendedPayment(sessionId: String, agreementId: Long): Double {
         val recPayMode = getOptionByName(sessionId, "recommended_payment_mode")
+        Log.info("try recPayment for agreementId:${agreementId}, modeV:${recPayMode?.value}")
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetRecommendedPayment().apply {
                 this.id = agreementId
-                this.mode = recPayMode?.toLong() ?: 0L
+                this.mode = recPayMode?.value?.toLong() ?: 0L
                 this.isConsiderinstallment = true
             },
             GetRecommendedPaymentResponse::class.java
         ).second.ret
     }
 
-
+    // get agreements info
     fun getAgreementInfo(sessionId: String): List<AgreementInfo> =
         getAccounts(sessionId).agreements.map { agreement -> 
             val recPayment = getRecommendedPayment(sessionId, agreement.agrmid)
+            val serviceInfo = getClientVGroupByAgreement(sessionId, agreement.agrmid).map {
+                ServiceInfo(
+                    id = it.vgroup.vgid,
+                    login = it.vgroup.login,
+                    address = it.addresses.first().address,
+                    tarName = it.vgroup.tarifdescr,
+                    tarShape = convertBpsToReadableFormat(it.vgroup.curshape),
+                    tarType = it.vgroup.tariftype,
+                    tarRent = it.vgroup.servicerent,
+                    blocked = it.vgroup.blocked != 0L
+                )
+            }
             AgreementInfo(
                 agreement.agrmid,
                 agreement.number,
@@ -207,7 +244,8 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
                 recPayment,
                 agreement.promisecredit,
                 agreement.paymentmethod == 1L,
-                agreement.credit
+                agreement.credit,
+                serviceInfo
             )
         }
 
@@ -237,5 +275,33 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
         }
     }
 
+    fun getClientPromisePayments(sessionId: String, agreementId: Long, dateFrom: String, dateTo: String): List<SoapPromisePayment> {
+        return adapter.getResponseAsMandatoryType(
+            sessionId,
+            GetClientPromisePayments().apply {
+                this.flt = SoapFilter().apply {
+                    this.agrmid = agreementId
+                    this.dtfrom = dateFrom
+                    this.dtto = dateTo
+                }
+            },
+            GetClientPromisePaymentsResponse::class.java
+        ).second.ret
+    }
+
+    private fun convertBpsToReadableFormat(bps: Long): String {
+        if (bps <= 0) return ""
+
+        val units = arrayOf("Kbps", "Mbps", "Gbps", "Tbps")
+        var value = bps//.toDouble()
+        var unitIndex = 0
+
+        while (value >= 1024 && unitIndex < units.size - 1) {
+            value /= 1024
+            unitIndex++
+        }
+
+        return "$value ${units[unitIndex]}"
+    }
 
 }

@@ -8,12 +8,16 @@ import org.eclipse.microprofile.graphql.Query
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import ru.openfs.lbapi.client.GoogleReCaptchaClient
 import ru.openfs.lbapi.service.LbApiService
+import java.time.LocalDate
 
 @GraphQLApi
 class GraphQLResource(
     private val service: LbApiService,
     @RestClient private val googleReCaptchaClient: GoogleReCaptchaClient,
 ) {
+
+    @Query
+    fun getApiReady() = service.isApiReady()
 
     @Query
     fun login(@Name("login") login: String, @Name("password") password: String): String {
@@ -99,20 +103,36 @@ class GraphQLResource(
         service.getClientInfo(sessionId)
 
     @Query
-    fun getClientVGroups(@Name("sessionId") sessionId: String) = service.getClientVGroup(sessionId)
+    fun getClientVGroups(@Name("sessionId") sessionId: String) =
+        service.getClientVGroups(sessionId)
 
     @Query
-    fun getAgreementInfo(@Name("sessionId") sessionId: String) = service.getAgreementInfo(sessionId)
+    fun getAgreementInfo(@Name("sessionId") sessionId: String) =
+        service.getAgreementInfo(sessionId)
 
     @Query
     fun getRecommendedPayment(
-	@Name("sessionId") sessionId: String, 
-	@Name("agreementId") agreementId: Long
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long
     ) = service.getRecommendedPayment(sessionId, agreementId)
 
     @Query
     fun getPromiseSettings(
-	@Name("sessionId") sessionId: String,
-	@Name("agreementId") agreementId: Long
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long
     ) = service.getClientPromiseSettings(sessionId, agreementId)
+
+    @Query
+    fun getPromisePayments(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+        @Name("dateFrom") dateFrom: String?,
+        @Name("dateTo") dateTo: String?,
+    ) = service.getClientPromisePayments(
+        sessionId,
+        agreementId,
+        dateFrom ?: LocalDate.now().minusWeeks(1L).toString(),
+        dateTo ?: LocalDate.now().toString()
+    )
+
 }

@@ -9,4 +9,5 @@ data class AgreementInfo (
     val promiseCreditAmount: Double,
     val isCredit: Boolean,
     val creditLimitAmount: Double,
+    val serviceInfo: List<ServiceInfo>?
 )
