@@ -4,18 +4,61 @@ import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import org.apache.camel.ProducerTemplate
 import org.eclipse.microprofile.rest.client.inject.RestClient
+import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.camel.CamelRoute
 import ru.openfs.lbapi.client.LbCoreRestClient
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.exception.NotAuthorizeException
 import ru.openfs.lbapi.exception.NotfoundAccountException
 import ru.openfs.lbapi.exception.PromisePaymentNotAllowedException
+import ru.openfs.lbapi.utils.FormatUtil.getDateStartMonth
+import ru.openfs.lbapi.utils.FormatUtil.getTomorrowDate
 
 @ApplicationScoped
 class LbCoreSoapAdapter(
     @RestClient private val restClient: LbCoreRestClient,
     private val producer: ProducerTemplate
 ) {
+
+    fun getClientStat(sessionId: String, agreementId: Long): SoapStat {
+        return getResponseAsMandatoryType(
+            sessionId,
+            GetClientStat().apply {
+                this.flt = SoapFilter().apply {
+                    this.dtfrom = getDateStartMonth()
+                    this.dtto = getTomorrowDate()
+                    this.agrmid = agreementId
+                    this.repnum = 14529L
+                    this.repdetail = 0L //?
+                }
+            },
+            GetClientStatResponse::class.java
+        ).second.ret.first()
+    }
+
+    fun getClientVGroupByAgreement(sessionId: String, agreementId: Long): List<SoapClientVgroupFull> {
+        return getResponseAsMandatoryType(
+            sessionId,
+            GetClientVgroups().apply {
+                this.flt = SoapFilter().apply {
+                    this.agrmid = agreementId
+                }
+            },
+            GetClientVgroupsResponse::class.java
+        ).second.ret
+    }
+
+    fun getRecommendedPayment(sessionId: String, agreementId: Long, mode: Long): Double {
+        return getResponseAsMandatoryType(
+            sessionId,
+            GetRecommendedPayment().apply {
+                this.id = agreementId
+                this.mode = mode
+                this.isConsiderinstallment = true
+            },
+            GetRecommendedPaymentResponse::class.java
+        ).second.ret
+    }
 
     fun getSessionId(request: Any): String =
         getResponseAsMandatoryType(null, request, String::class.java).first

@@ -1,12 +1,13 @@
 package ru.openfs.lbapi.service
 
-import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.model.*
 import ru.openfs.lbapi.service.adapter.LbCoreSoapAdapter
+import ru.openfs.lbapi.utils.FormatUtil.convertBpsToReadableFormat
 import java.time.LocalDate
+import java.time.Month
 
 @ApplicationScoped
 class LbApiService(private val adapter: LbCoreSoapAdapter) {
@@ -187,17 +188,6 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             GetClientInfoResponse::class.java
         ).second.ret.first()
 
-    fun getClientVGroupByAgreement(sessionId: String, agreementId: Long): List<SoapClientVgroupFull> =
-        adapter.getResponseAsMandatoryType(
-            sessionId,
-            GetClientVgroups().apply {
-                this.flt = SoapFilter().apply {
-                    this.agrmid = agreementId
-                }
-            },
-            GetClientVgroupsResponse::class.java
-        ).second.ret
-
     fun getClientVGroups(sessionId: String): List<SoapClientVgroupFull> =
         adapter.getResponseAsMandatoryType(
             sessionId,
@@ -205,52 +195,46 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             GetClientVgroupsResponse::class.java
         ).second.ret
 
-    // get rec payment by agreementId
-    fun getRecommendedPayment(sessionId: String, agreementId: Long): Double {
-        val recPayMode = getOptionByName(sessionId, "recommended_payment_mode")
-        Log.info("try recPayment for agreementId:${agreementId}, modeV:${recPayMode?.value}")
-        return adapter.getResponseAsMandatoryType(
-            sessionId,
-            GetRecommendedPayment().apply {
-                this.id = agreementId
-                this.mode = recPayMode?.value?.toLong() ?: 0L
-                this.isConsiderinstallment = true
-            },
-            GetRecommendedPaymentResponse::class.java
-        ).second.ret
-    }
-
     // get agreements info
-    fun getAgreementInfo(sessionId: String): List<AgreementInfo> =
-        getAccounts(sessionId).agreements.map { agreement -> 
-            val recPayment = getRecommendedPayment(sessionId, agreement.agrmid)
-            val serviceInfo = getClientVGroupByAgreement(sessionId, agreement.agrmid).map {
-                ServiceInfo(
-                    id = it.vgroup.vgid,
-                    login = it.vgroup.login,
-                    address = it.addresses.first().address,
-                    tarName = it.vgroup.tarifdescr,
-                    tarShape = convertBpsToReadableFormat(it.vgroup.curshape),
-                    tarType = it.vgroup.tariftype,
-                    tarRent = it.vgroup.servicerent,
-                    blocked = it.vgroup.blocked != 0L
-                )
-            }
+    fun getAgreementsInfo(sessionId: String): List<AgreementInfo> =
+        getAccounts(sessionId).agreements.map { agreement ->
             AgreementInfo(
                 agreement.agrmid,
                 agreement.number,
                 agreement.date,
                 agreement.balance,
-                recPayment,
+                adapter.getRecommendedPayment(sessionId, agreement.agrmid, 3L),
+                adapter.getRecommendedPayment(sessionId, agreement.agrmid, 0L),
                 agreement.promisecredit,
                 agreement.paymentmethod == 1L,
                 agreement.credit,
-                serviceInfo
+                adapter
+                    .getClientVGroupByAgreement(sessionId, agreement.agrmid)
+                    // keep inet and onetime
+                    .filter { it.vgroup.tariftype == 1L || it.vgroup.tariftype == 5L }
+                    .map {
+                        ServiceInfo(
+                            id = it.vgroup.vgid,
+                            login = it.vgroup.login,
+                            address = it.addresses.first().address,
+                            tarName = it.vgroup.tarifdescr,
+                            tarShape = convertBpsToReadableFormat(it.vgroup.curshape),
+                            tarRent = it.vgroup.servicerent,
+                            blocked = it.vgroup.blocked != 0L,
+                            blockedType = it.vgroup.blocked,
+                            tarType = it.vgroup.tariftype,
+                            rentPeriod = when {
+                                it.vgroup.tarifdescr.contains("полугодовой") -> "за 6 мес."
+                                it.vgroup.tarifdescr.contains("годовой") -> "за 12 мес."
+                                else -> "в мес."
+                            }
+                        )
+                    },
             )
         }
 
     fun getClientPromiseSettings(sessionId: String, agreementId: Long): PromiseSettings {
-        val recPayment = getRecommendedPayment(sessionId, agreementId)
+        val recPayment = adapter.getRecommendedPayment(sessionId, agreementId, 0L)
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientPPSettings().apply { this.agrm = agreementId },
@@ -275,33 +259,55 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
         }
     }
 
-    fun getClientPromisePayments(sessionId: String, agreementId: Long, dateFrom: String, dateTo: String): List<SoapPromisePayment> {
+    fun getClientPromisePayments(
+        sessionId: String,
+        agreementId: Long,
+        dateFrom: String?,
+        dateTo: String?
+    ): List<SoapPromisePayment> {
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientPromisePayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId
-                    this.dtfrom = dateFrom
-                    this.dtto = dateTo
+                    this.dtfrom = dateFrom ?: LocalDate.now().minusMonths(1L).toString()
+                    this.dtto = dateTo ?: LocalDate.now().toString()
                 }
             },
             GetClientPromisePaymentsResponse::class.java
         ).second.ret
     }
 
-    private fun convertBpsToReadableFormat(bps: Long): String {
-        if (bps <= 0) return ""
-
-        val units = arrayOf("Kbps", "Mbps", "Gbps", "Tbps")
-        var value = bps//.toDouble()
-        var unitIndex = 0
-
-        while (value >= 1024 && unitIndex < units.size - 1) {
-            value /= 1024
-            unitIndex++
+    fun getClientPayments(
+        sessionId: String,
+        agreementId: Long,
+        year: Int? = null,
+    ): List<PaymentsInfo> {
+        return adapter.getResponseAsMandatoryType(
+            sessionId,
+            GetClientPayments().apply {
+                this.flt = SoapFilter().apply {
+                    this.agrmid = agreementId
+                    this.dtfrom = if (year == null)
+                        LocalDate.of(LocalDate.now().year, Month.JANUARY, 1).toString()
+                    else
+                        LocalDate.of(year, Month.JANUARY, 1).toString()
+                    this.dtto = if (year == null)
+                        LocalDate.now().plusDays(1L).toString()
+                    else
+                        LocalDate.of(year, Month.DECEMBER, 31).plusDays(1L).toString()
+                }
+            },
+            GetClientPaymentsResponse::class.java
+        ).second.ret.map {
+            PaymentsInfo(
+                paymentType = it.mgr,
+                paymentCode = it.pay.comment,
+                paymentId = it.pay.receipt,
+                paymentAmount = it.amountcurr,
+                paymentDate = it.pay.paydate
+            )
         }
-
-        return "$value ${units[unitIndex]}"
     }
 
 }

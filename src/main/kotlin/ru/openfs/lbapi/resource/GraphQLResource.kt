@@ -8,7 +8,6 @@ import org.eclipse.microprofile.graphql.Query
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import ru.openfs.lbapi.client.GoogleReCaptchaClient
 import ru.openfs.lbapi.service.LbApiService
-import java.time.LocalDate
 
 @GraphQLApi
 class GraphQLResource(
@@ -103,18 +102,14 @@ class GraphQLResource(
         service.getClientInfo(sessionId)
 
     @Query
-    fun getClientVGroups(@Name("sessionId") sessionId: String) =
-        service.getClientVGroups(sessionId)
+    fun getAgreementsInfo(@Name("sessionId") sessionId: String) =
+        service.getAgreementsInfo(sessionId)
 
     @Query
-    fun getAgreementInfo(@Name("sessionId") sessionId: String) =
-        service.getAgreementInfo(sessionId)
-
-    @Query
-    fun getRecommendedPayment(
+    fun getAgreementInfo(
         @Name("sessionId") sessionId: String,
         @Name("agreementId") agreementId: Long
-    ) = service.getRecommendedPayment(sessionId, agreementId)
+    ) =  service.getAgreementsInfo(sessionId).filter { it.id == agreementId }
 
     @Query
     fun getPromiseSettings(
@@ -128,11 +123,12 @@ class GraphQLResource(
         @Name("agreementId") agreementId: Long,
         @Name("dateFrom") dateFrom: String?,
         @Name("dateTo") dateTo: String?,
-    ) = service.getClientPromisePayments(
-        sessionId,
-        agreementId,
-        dateFrom ?: LocalDate.now().minusWeeks(1L).toString(),
-        dateTo ?: LocalDate.now().toString()
-    )
+    ) = service.getClientPromisePayments(sessionId, agreementId, dateFrom, dateTo)
 
+    @Query
+    fun getPayments(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+        @Name("year") year: Int?,
+    ) = service.getClientPayments(sessionId, agreementId, year)
 }

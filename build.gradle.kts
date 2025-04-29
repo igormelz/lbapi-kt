@@ -33,7 +33,7 @@ dependencies {
 }
 
 group = "ru.openfs"
-version = "1.0.1"
+version = "1.0.6"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

@@ -6,8 +6,9 @@ data class AgreementInfo (
     val createDate: String,
     val balance: Double,
     val recPaymentAmount: Double,
+    val defPaymentAmount: Double,
     val promiseCreditAmount: Double,
     val isCredit: Boolean,
     val creditLimitAmount: Double,
-    val serviceInfo: List<ServiceInfo>?
+    val serviceInfo: List<ServiceInfo>?,
 )
