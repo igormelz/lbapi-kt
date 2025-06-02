@@ -19,7 +19,7 @@ object FormatUtil {
     }
 
     fun getDateStartMonth() = LocalDate.now().withDayOfMonth(1).toString()
-
     fun getTomorrowDate() = LocalDate.now().plusDays(1L).toString()
+    fun getDateStartNextMonth() = LocalDate.now().plusMonths(1L).withDayOfMonth(1).toString()
 
 }

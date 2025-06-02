@@ -1,16 +1,22 @@
 package ru.openfs.lbapi.service
 
+import io.smallrye.mutiny.Uni
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.model.*
+import ru.openfs.lbapi.service.adapter.DbAdapter
+import ru.openfs.lbapi.service.adapter.EmailAdapter
 import ru.openfs.lbapi.service.adapter.LbCoreSoapAdapter
-import ru.openfs.lbapi.utils.FormatUtil.convertBpsToReadableFormat
 import java.time.LocalDate
 import java.time.Month
 
 @ApplicationScoped
-class LbApiService(private val adapter: LbCoreSoapAdapter) {
+class LbApiService(
+    private val adapter: LbCoreSoapAdapter,
+    private val dbAdapter: DbAdapter,
+    private val emailAdapter: EmailAdapter,
+) {
 
     fun isApiReady(): Boolean {
         try {
@@ -188,12 +194,103 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
             GetClientInfoResponse::class.java
         ).second.ret.first()
 
-    fun getClientVGroups(sessionId: String): List<SoapClientVgroupFull> =
-        adapter.getResponseAsMandatoryType(
-            sessionId,
-            GetClientVgroups(),
-            GetClientVgroupsResponse::class.java
-        ).second.ret
+    fun getAgreementStat(sessionId: String, agreementId: Long) =
+        dbAdapter.getVGroups(agreementId).flatMap { vGroup ->
+            adapter.getClientTarStat(sessionId, agreementId, vGroup.vgId)
+                .data.map { v ->
+                    InvoiceData(
+                        // vg names: [uid, agrm_id, vg_id, period, tar_id, rent, serv, above, pays]
+                        vgId = v.`val`[2].toLong(),
+                        tarId = v.`val`[4].toLong(),
+                        serviceName = vGroup.descr,
+                        //period = v.`val`[3],
+                        charges = v.`val`[5].toDouble() + v.`val`[6].toDouble() + v.`val`[7].toDouble(),
+                    )
+                } +
+                    adapter.getClientSrvStat(sessionId, agreementId, vGroup.vgId)
+                        .data.map { v ->
+                            InvoiceData(
+                                // srv names: [agent_descr, agent_id, agent_type, agrm_id, amount, ani, cat_idx, charge_flag, curr_symbol, dst_ip, dst_port, duration, src_ip, tar_id, total, vg_id, volume, volume_in, volume_out, zone_descr]
+                                vgId = v.`val`[15].toLong(),
+                                tarId = v.`val`[13].toLong(),
+                                serviceName = v.`val`[19],
+                                charges = v.`val`[4].toDouble(),
+                            )
+                        }.filter { it.charges > 0 }
+        }
+
+    /**
+     * @param float $amount стоимость
+     * @param float $rate относительная скидка
+     * @param float $discount абсолютная скидка
+     * @return float стоимость со скидкой
+     */
+    private fun calcDiscount(amount: Double, rate: Double, discount: Double): Double {
+        return when {
+            rate != 1.0 -> amount * rate
+            discount == 0.0 -> amount
+            else -> amount - discount
+        }
+    }
+
+//    private fun getServiceInfo(sessionId: String, agreementId: Long) =
+//        adapter
+//            .getClientVGroupByAgreement(sessionId, agreementId)
+//            // keep inet and onetime
+//            //.filter { it.vgroup.tariftype == 1L || it.vgroup.tariftype == 5L }
+//            .map {
+//                ServiceInfo(
+//                    id = it.vgroup.vgid,
+//                    login = it.vgroup.login,
+//                    address = it.addresses.first().address,
+//                    tarName = it.vgroup.tarifdescr,
+//                    tarShape = convertBpsToReadableFormat(it.vgroup.curshape),
+//                    //tarRent = it.vgroup.servicerent,
+//                    tarRent = calcDiscount(
+//                        it.vgroup.servicerent,
+//                        if (it.vgroup.currentmodifier.type == "rate") it.vgroup.currentmodifier.value else 1.0,
+//                        if (it.vgroup.currentmodifier.type == "discount") it.vgroup.currentmodifier.value else 0.0,
+//                    ),
+//                    blocked = it.vgroup.blocked != 0L,
+//                    blockedType = it.vgroup.blocked,
+//                    tarType = when {
+//                        it.vgroup.tariftype < 3L -> "internet"
+//                        it.vgroup.tariftype == 5L -> "services"
+//                        it.vgroup.tariftype == 5L && it.vgroup.usecas == 1L -> "DTV"
+//                        it.vgroup.tariftype == 3L || it.vgroup.tariftype == 4L -> "Phone"
+//                        else -> "NaN"
+//                    },
+//                    rentPeriod = when {
+//                        it.vgroup.tarifdescr.contains("полугодовой") -> "за 6 мес."
+//                        it.vgroup.tarifdescr.contains("годовой") -> "за 12 мес."
+//                        else -> "в мес."
+//                    },
+//                    extService = adapter.getUsboxService(sessionId, it.vgroup.vgid)?.let {
+//                        ExtService(
+//                            descr = it.catdescr,
+//                            rent = calcDiscount(
+//                                it.catabove,
+//                                if (it.currentmodifier.type == "rate") it.currentmodifier.value else 1.0,
+//                                if (it.currentmodifier.type == "discount") it.currentmodifier.value else 0.0,
+//                            ),
+//                            rentPeriod = when(it.common) {
+//                                0L -> "разовое"
+//                                1L -> "в мес."
+//                                2L -> "в день"
+//                                3L -> "ежедневное равными долями"
+//                                4L -> "за 12 мес."
+//                                else -> "NaN"
+//                            },
+//                            it.service.state,
+//                            when(it.service.state) {
+//                                0L, 2L -> "отключена"
+//                                else -> "включена"
+//                            }
+//                        )
+//                    }
+//                )
+//            }
+
 
     // get agreements info
     fun getAgreementsInfo(sessionId: String): List<AgreementInfo> =
@@ -208,28 +305,7 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
                 agreement.promisecredit,
                 agreement.paymentmethod == 1L,
                 agreement.credit,
-                adapter
-                    .getClientVGroupByAgreement(sessionId, agreement.agrmid)
-                    // keep inet and onetime
-                    .filter { it.vgroup.tariftype == 1L || it.vgroup.tariftype == 5L }
-                    .map {
-                        ServiceInfo(
-                            id = it.vgroup.vgid,
-                            login = it.vgroup.login,
-                            address = it.addresses.first().address,
-                            tarName = it.vgroup.tarifdescr,
-                            tarShape = convertBpsToReadableFormat(it.vgroup.curshape),
-                            tarRent = it.vgroup.servicerent,
-                            blocked = it.vgroup.blocked != 0L,
-                            blockedType = it.vgroup.blocked,
-                            tarType = it.vgroup.tariftype,
-                            rentPeriod = when {
-                                it.vgroup.tarifdescr.contains("полугодовой") -> "за 6 мес."
-                                it.vgroup.tarifdescr.contains("годовой") -> "за 12 мес."
-                                else -> "в мес."
-                            }
-                        )
-                    },
+                dbAdapter.getVGroupsAndServices(agreement.agrmid),
             )
         }
 
@@ -308,6 +384,10 @@ class LbApiService(private val adapter: LbCoreSoapAdapter) {
                 paymentDate = it.pay.paydate
             )
         }
+    }
+
+    fun sentEmailConfirmed(): Uni<String> {
+        return emailAdapter.sendEmail("TEST")
     }
 
 }

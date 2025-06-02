@@ -106,10 +106,16 @@ class GraphQLResource(
         service.getAgreementsInfo(sessionId)
 
     @Query
+    fun getAgreementsStat(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long
+    ) = service.getAgreementStat(sessionId, agreementId)
+
+    @Query
     fun getAgreementInfo(
         @Name("sessionId") sessionId: String,
         @Name("agreementId") agreementId: Long
-    ) =  service.getAgreementsInfo(sessionId).filter { it.id == agreementId }
+    ) = service.getAgreementsInfo(sessionId).filter { it.id == agreementId }
 
     @Query
     fun getPromiseSettings(
@@ -131,4 +137,5 @@ class GraphQLResource(
         @Name("agreementId") agreementId: Long,
         @Name("year") year: Int?,
     ) = service.getClientPayments(sessionId, agreementId, year)
+
 }

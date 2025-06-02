@@ -1,5 +1,8 @@
 package ru.openfs.lbapi.model
 
+import io.vertx.core.cli.annotations.Summary
+import io.vertx.mutiny.sqlclient.Row
+
 data class AgreementInfo (
     val id: Long,
     val number: String,
@@ -10,5 +13,59 @@ data class AgreementInfo (
     val promiseCreditAmount: Double,
     val isCredit: Boolean,
     val creditLimitAmount: Double,
-    val serviceInfo: List<ServiceInfo>?,
+    val serviceInfo: List<ServiceInfo>
 )
+
+data class RentByPeriod (
+    val rentPeriod: String,
+    val rentAmount:Double,
+)
+
+data class ServiceInfo(
+    val id: Long,
+    val login: String,
+    val address: String,
+    val tarType: String,
+    val tarName: String,
+    val tarShape: String,
+    val tarRent: Double,
+    val blocked: Boolean,
+    val blockedType: Long,
+    val rentPeriod: String,
+    val extService: List<ExtService>,
+    val rentSummary: List<RentByPeriod>
+)
+
+data class ExtService(
+    val descr: String,
+    val rent: Double,
+    val rentPeriod: String,
+    val state: Long,
+    val stateDescr: String
+) {
+    companion object {
+        fun fromRow(row: Row): ExtService? {
+            try {
+                return ExtService(
+                    descr = row.getString("descr"),
+                    rent = row.getDouble("above"),
+                    rentPeriod = when (row.getInteger("rent_period")) {
+                        0 -> "разовое"
+                        1 -> "в мес."
+                        2 -> "в день"
+                        3 -> "ежедневное равными долями"
+                        4 -> "в год"
+                        else -> "NaN"
+                    },
+                    state = row.getLong("state"),
+                    stateDescr = when (row.getInteger("state")) {
+                        0, 2 -> "отключена"
+                        else -> "включена"
+                    }
+                )
+            } catch (e: Exception) {
+                return null
+            }
+        }
+    }
+}
