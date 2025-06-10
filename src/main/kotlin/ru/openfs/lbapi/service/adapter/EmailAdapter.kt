@@ -24,7 +24,10 @@ class EmailAdapter(private val mailer: ReactiveMailer) {
                             </html>
                 
                 """.trimIndent()
-        val imageData = javaClass.getClassLoader().getResourceAsStream("logo.png").readAllBytes()
+
+        val imageData = javaClass.getClassLoader().getResourceAsStream("logo.png")
+            ?.use { it.readAllBytes() }
+
         return mailer.send(
             Mail.withHtml(
                 "igorm@openfs.ru",

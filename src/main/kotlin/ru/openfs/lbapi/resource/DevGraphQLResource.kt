@@ -34,4 +34,10 @@ class DevGraphQLResource(
 
     @Mutation
     fun devEmail() = service.sentEmailConfirmed()
+
+    @Query
+    fun devPromisePayments(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+    ) = service.getClientPromisePayments(sessionId, agreementId)
 }

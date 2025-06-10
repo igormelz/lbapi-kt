@@ -219,19 +219,13 @@ class LbApiService(
                         }.filter { it.charges > 0 }
         }
 
-    /**
-     * @param float $amount стоимость
-     * @param float $rate относительная скидка
-     * @param float $discount абсолютная скидка
-     * @return float стоимость со скидкой
-     */
-    private fun calcDiscount(amount: Double, rate: Double, discount: Double): Double {
-        return when {
-            rate != 1.0 -> amount * rate
-            discount == 0.0 -> amount
-            else -> amount - discount
-        }
-    }
+//    private fun calcDiscount(amount: Double, rate: Double, discount: Double): Double {
+//        return when {
+//            rate != 1.0 -> amount * rate
+//            discount == 0.0 -> amount
+//            else -> amount - discount
+//        }
+//    }
 
 //    private fun getServiceInfo(sessionId: String, agreementId: Long) =
 //        adapter
@@ -306,6 +300,12 @@ class LbApiService(
                 agreement.paymentmethod == 1L,
                 agreement.credit,
                 dbAdapter.getVGroupsAndServices(agreement.agrmid),
+                if(agreement.promisecredit > 0.0) {
+                    PromiseCredit(
+                        agreement.promisecredit,
+                        getClientPromisePayments(sessionId, agreement.agrmid)
+                    )
+                } else null
             )
         }
 
@@ -317,7 +317,7 @@ class LbApiService(
             GetClientPPSettingsResponse::class.java
         ).second.ret.first().let {
             PromiseSettings(
-                isAllowed = it.promiseavailable != 1L,
+                isAllowed = it.promiseavailable == 1L,
 //                        (p.balance < 0 && abs(p.balance) > it.promiselimit) -> false
 //                        (p.isCredit) -> false
                 dateLimit = LocalDate.now().plusDays(it.promisetill),
@@ -337,21 +337,19 @@ class LbApiService(
 
     fun getClientPromisePayments(
         sessionId: String,
-        agreementId: Long,
-        dateFrom: String?,
-        dateTo: String?
-    ): List<SoapPromisePayment> {
+        agreementId: Long
+    ): String? {
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientPromisePayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId
-                    this.dtfrom = dateFrom ?: LocalDate.now().minusMonths(1L).toString()
-                    this.dtto = dateTo ?: LocalDate.now().toString()
+                    this.dtfrom = LocalDate.now().minusMonths(0L).toString()
+                    this.dtto = LocalDate.now().plusMonths(1L).toString()
                 }
             },
             GetClientPromisePaymentsResponse::class.java
-        ).second.ret
+        ).second.ret.firstOrNull()?.promtill
     }
 
     fun getClientPayments(

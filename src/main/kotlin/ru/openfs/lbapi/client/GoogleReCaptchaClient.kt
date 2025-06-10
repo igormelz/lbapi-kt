@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.client
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.quarkus.rest.client.reactive.ClientFormParam
 import jakarta.ws.rs.FormParam
 import jakarta.ws.rs.POST
@@ -15,6 +16,8 @@ fun interface GoogleReCaptchaClient {
 }
 
 data class GoogleReCaptchaResponse(
-    val success: Boolean,
-    val hostname: String,
+    val success: Boolean?,
+    val hostname: String?,
+    @JsonProperty("error_codes")
+    val errorCodes: List<String>?,
 )

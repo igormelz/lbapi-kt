@@ -19,7 +19,10 @@ class GraphQLResource(
     fun getApiReady() = service.isApiReady()
 
     @Query
-    fun login(@Name("login") login: String, @Name("password") password: String): String {
+    fun login(
+        @Name("login") login: String,
+        @Name("password") password: String
+    ): String {
         Log.info("Try login: $login")
 
         val answer = service.startSession(login, password)
@@ -29,7 +32,9 @@ class GraphQLResource(
     }
 
     @Query
-    fun logout(@Name("sessionId") sessionId: String): String {
+    fun logout(
+        @Name("sessionId") sessionId: String
+    ): String {
         Log.info("Try logout: $sessionId")
 
         service.closeSession(sessionId)
@@ -39,13 +44,24 @@ class GraphQLResource(
     }
 
     @Query
-    fun getAccounts(@Name("sessionId") sessionId: String) = service.getAccounts(sessionId)
+    fun getAccounts(
+        @Name("sessionId") sessionId: String
+    ) = service.getAccounts(sessionId)
 
     @Query
-    fun getEmailIsConfirmed(@Name("login") login: String) = service.getAccountIsEmailConfirm(login)
+    fun getEmailIsConfirmed(
+        @Name("login") login: String
+    ): Boolean {
+        Log.info("try test email confirmed for $login")
+        val answer = service.getAccountIsEmailConfirm(login)
+        if (answer) Log.info("Successfully get email confirmed for $login") else Log.info("Fail to get email confirmed for $login")
+        return answer
+    }
 
     @Query
-    fun getRecoveryPassword(@Name("login") login: String) = service.getRecoveryPassword(login)
+    fun getRecoveryPassword(
+        @Name("login") login: String
+    ) = service.getRecoveryPassword(login)
 
     @Mutation
     fun updatePasswordByCode(
@@ -67,12 +83,16 @@ class GraphQLResource(
     }
 
     @Query
-    fun verifyCode(@Name("code") code: String) =
-        googleReCaptchaClient.verifyToken(code).success
+    fun verifyCode(@Name("code") code: String): Boolean {
+        val ggl = googleReCaptchaClient.verifyToken(code)
+        Log.info("Successfully verify code: $ggl")
+        return ggl.success == true
+    }
 
     @Query
-    fun getPasswordTemplate(@Name("sessionId") sessionId: String) =
-        service.getPassTemplate(sessionId)
+    fun getPasswordTemplate(
+        @Name("sessionId") sessionId: String
+    ) = service.getPassTemplate(sessionId)
 
     @Mutation
     fun updatePassword(
@@ -122,14 +142,6 @@ class GraphQLResource(
         @Name("sessionId") sessionId: String,
         @Name("agreementId") agreementId: Long
     ) = service.getClientPromiseSettings(sessionId, agreementId)
-
-    @Query
-    fun getPromisePayments(
-        @Name("sessionId") sessionId: String,
-        @Name("agreementId") agreementId: Long,
-        @Name("dateFrom") dateFrom: String?,
-        @Name("dateTo") dateTo: String?,
-    ) = service.getClientPromisePayments(sessionId, agreementId, dateFrom, dateTo)
 
     @Query
     fun getPayments(
