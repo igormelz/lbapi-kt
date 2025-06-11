@@ -8,6 +8,7 @@ import ru.openfs.lbapi.model.*
 import ru.openfs.lbapi.service.adapter.DbAdapter
 import ru.openfs.lbapi.service.adapter.EmailAdapter
 import ru.openfs.lbapi.service.adapter.LbCoreSoapAdapter
+import ru.openfs.lbapi.utils.FormatUtil.isDateTimeAfterNow
 import java.time.LocalDate
 import java.time.Month
 
@@ -299,8 +300,8 @@ class LbApiService(
                 agreement.promisecredit,
                 agreement.paymentmethod == 1L,
                 agreement.credit,
-                dbAdapter.getVGroupsAndServices(agreement.agrmid),
-                if(agreement.promisecredit > 0.0) {
+                dbAdapter.getVGroupsAndServices(agreement.agrmid).firstOrNull(),
+                if (agreement.promisecredit > 0.0) {
                     PromiseCredit(
                         agreement.promisecredit,
                         getClientPromisePayments(sessionId, agreement.agrmid)
@@ -388,4 +389,78 @@ class LbApiService(
         return emailAdapter.sendEmail("TEST")
     }
 
+    fun getUserBlockTemplate(
+        sessionId: String,
+        agreementId: Long,
+        vgId: Long,
+    ): UserBlockTemplate? = adapter.getResponseAsMandatoryType(
+        sessionId,
+        GetUserBlockTemplate().apply {
+            this.flt = SoapGetUserBlockTemplate().apply {
+                this.agrmid = agreementId
+                this.vgid = vgId
+            }
+        },
+        GetUserBlockTemplateResponse::class.java
+    ).second.ret.firstOrNull()?.let {
+        UserBlockTemplate(
+            it.durationmin,
+            it.durationmax,
+            it.numavailtodestination,
+            it.positivebalance == 1L
+        )
+    }
+
+    fun getVgUserBlockSchedule(
+        sessionId: String,
+        agreementId: Long,
+        vgId: Long,
+    ): List<UserBlockSchedule> = adapter.getResponseAsMandatoryType(
+        sessionId,
+        GetVgUserBlockSchedule().apply {
+            this.flt = SoapGetVgUserBlockSchedule().apply {
+                this.agrmid = agreementId
+                this.vgid = vgId
+            }
+        },
+        GetVgUserBlockScheduleResponse::class.java
+    ).second.ret.map {
+        UserBlockSchedule(
+            it.recordid,
+            it.creationdate,
+            it.timefrom,
+            it.timeto,
+            it.timeto.isDateTimeAfterNow()
+        )
+    }
+
+    fun setVgUserBlockSchedule(
+        sessionId: String,
+        vgId: Long,
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): Long = adapter.getResponseAsMandatoryType(
+        sessionId,
+        SetVgUserBlockSchedule().apply {
+            this.`val` = SoapVgUserBlockSchedule().apply {
+                this.comment = "test"
+                this.vgid = vgId
+                this.timefrom = startDate.toString()
+                this.timeto = endDate.toString()
+                // this.parentid = 0L ???
+            }
+        },
+        SetVgUserBlockScheduleResponse::class.java
+    ).second.ret
+
+    fun delVgUserBlockSchedule(
+        sessionId: String,
+        recordId: Long,
+    ): Long = adapter.getResponseAsMandatoryType(
+        sessionId,
+        DelVgUserBlockSchedule().apply {
+            this.id = recordId
+        },
+        DelVgUserBlockScheduleResponse::class.java
+    ).second.ret
 }

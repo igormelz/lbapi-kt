@@ -1,31 +1,30 @@
 package ru.openfs.lbapi.model
 
-import io.vertx.core.cli.annotations.Summary
 import io.vertx.mutiny.sqlclient.Row
-import java.time.LocalDate
 
-data class AgreementInfo (
+data class AgreementInfo(
     val id: Long,
     val number: String,
     val createDate: String,
     val balance: Double,
     val recPaymentAmount: Double,
     val defPaymentAmount: Double,
+    @Deprecated("remove and switch to the promiseCredit")
     val promiseCreditAmount: Double,
     val isCredit: Boolean,
     val creditLimitAmount: Double,
-    val serviceInfo: List<ServiceInfo>,
+    val serviceInfo: ServiceInfo?,
     val promiseCredit: PromiseCredit?,
 )
 
-data class PromiseCredit (
+data class PromiseCredit(
     val amount: Double,
     val untilDate: String?,
 )
 
-data class RentByPeriod (
+data class RentByPeriod(
     val rentPeriod: String,
-    val rentAmount:Double,
+    val rentAmount: Double,
 )
 
 data class ServiceInfo(

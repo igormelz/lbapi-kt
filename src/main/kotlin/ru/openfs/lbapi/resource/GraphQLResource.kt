@@ -8,6 +8,8 @@ import org.eclipse.microprofile.graphql.Query
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import ru.openfs.lbapi.client.GoogleReCaptchaClient
 import ru.openfs.lbapi.service.LbApiService
+import java.time.Instant
+import java.time.ZoneOffset
 
 @GraphQLApi
 class GraphQLResource(
@@ -150,4 +152,30 @@ class GraphQLResource(
         @Name("year") year: Int?,
     ) = service.getClientPayments(sessionId, agreementId, year)
 
+    @Query
+    fun getUserBlockTemplate(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+        @Name("vgId") vgId: Long
+    ) = service.getUserBlockTemplate(sessionId, agreementId, vgId)
+
+    @Query
+    fun getUserBlockSchedule(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+        @Name("vgId") vgId: Long
+    ) = service.getVgUserBlockSchedule(sessionId, agreementId, vgId)
+
+    @Mutation
+    fun setUserBlock(
+        @Name("sessionId") sessionId: String,
+        @Name("vgId") vgId: Long,
+        @Name("startDate") startDate: String,
+        @Name("endDate") endDate: String,
+    ): Long {
+        val fromDate = Instant.parse(startDate).atZone(ZoneOffset.systemDefault()).toLocalDate()
+        val toDate = Instant.parse(endDate).atZone(ZoneOffset.systemDefault()).toLocalDate()
+        Log.info("try block: ${vgId} from: $startDate [$fromDate], to: $endDate [$toDate]")
+        return service.setVgUserBlockSchedule(sessionId, vgId, fromDate, toDate)
+    }
 }

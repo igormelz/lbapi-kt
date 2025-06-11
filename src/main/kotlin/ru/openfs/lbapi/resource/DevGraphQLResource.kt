@@ -1,7 +1,5 @@
 package ru.openfs.lbapi.resource
 
-import graphql.Mutable
-import io.smallrye.common.annotation.Blocking
 import org.eclipse.microprofile.graphql.GraphQLApi
 import org.eclipse.microprofile.graphql.Mutation
 import org.eclipse.microprofile.graphql.Name
@@ -40,4 +38,10 @@ class DevGraphQLResource(
         @Name("sessionId") sessionId: String,
         @Name("agreementId") agreementId: Long,
     ) = service.getClientPromisePayments(sessionId, agreementId)
+
+    @Mutation
+    fun devDelUserBlockTemplate(
+        @Name("sessionId") sessionId: String,
+        @Name("recordId") id: Long
+    ) = service.delVgUserBlockSchedule(sessionId, id)
 }
