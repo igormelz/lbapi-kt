@@ -39,9 +39,4 @@ class DevGraphQLResource(
         @Name("agreementId") agreementId: Long,
     ) = service.getClientPromisePayments(sessionId, agreementId)
 
-    @Mutation
-    fun devDelUserBlockTemplate(
-        @Name("sessionId") sessionId: String,
-        @Name("recordId") id: Long
-    ) = service.delVgUserBlockSchedule(sessionId, id)
 }

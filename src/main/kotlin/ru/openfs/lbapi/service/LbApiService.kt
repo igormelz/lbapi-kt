@@ -290,6 +290,7 @@ class LbApiService(
     // get agreements info
     fun getAgreementsInfo(sessionId: String): List<AgreementInfo> =
         getAccounts(sessionId).agreements.map { agreement ->
+            val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid).firstOrNull()
             AgreementInfo(
                 agreement.agrmid,
                 agreement.number,
@@ -300,12 +301,16 @@ class LbApiService(
                 agreement.promisecredit,
                 agreement.paymentmethod == 1L,
                 agreement.credit,
-                dbAdapter.getVGroupsAndServices(agreement.agrmid).firstOrNull(),
+                serviceInfo,
                 if (agreement.promisecredit > 0.0) {
                     PromiseCredit(
                         agreement.promisecredit,
                         getClientPromisePayments(sessionId, agreement.agrmid)
                     )
+                } else null,
+                if (serviceInfo != null) {
+                    getVgUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo.id)
+                        .firstOrNull { it.isActive }
                 } else null
             )
         }

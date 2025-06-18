@@ -15,6 +15,7 @@ data class AgreementInfo(
     val creditLimitAmount: Double,
     val serviceInfo: ServiceInfo?,
     val promiseCredit: PromiseCredit?,
+    val activeUserBlockSchedule: UserBlockSchedule?,
 )
 
 data class PromiseCredit(

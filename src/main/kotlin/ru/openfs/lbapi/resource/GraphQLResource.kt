@@ -178,4 +178,10 @@ class GraphQLResource(
         Log.info("try block: ${vgId} from: $startDate [$fromDate], to: $endDate [$toDate]")
         return service.setVgUserBlockSchedule(sessionId, vgId, fromDate, toDate)
     }
+
+    @Mutation
+    fun removeUserBlock(
+        @Name("sessionId") sessionId: String,
+        @Name("recordId") id: Long
+    ) = service.delVgUserBlockSchedule(sessionId, id)
 }
