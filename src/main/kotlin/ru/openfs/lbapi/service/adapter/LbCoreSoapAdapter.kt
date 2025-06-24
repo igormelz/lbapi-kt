@@ -11,6 +11,7 @@ import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.exception.NotAuthorizeException
 import ru.openfs.lbapi.exception.NotfoundAccountException
 import ru.openfs.lbapi.exception.PromisePaymentNotAllowedException
+import ru.openfs.lbapi.exception.PromisePaymentOverdueException
 import ru.openfs.lbapi.utils.FormatUtil.getDateStartMonth
 import ru.openfs.lbapi.utils.FormatUtil.getDateStartNextMonth
 import ru.openfs.lbapi.utils.FormatUtil.getTomorrowDate
@@ -113,6 +114,7 @@ class LbCoreSoapAdapter(
                         "Promise payments already assigned" -> throw PromisePaymentNotAllowedException(err)
                         "Client not authorized" -> throw NotAuthorizeException(err)
                         "Account not found" -> throw NotfoundAccountException(err)
+                        "Promise payment is not available, last payment is overdue" -> throw PromisePaymentOverdueException(err)
                         else -> throw ApiException(err)
                     }
                 }

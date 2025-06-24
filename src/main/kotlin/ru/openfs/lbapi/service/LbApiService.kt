@@ -305,7 +305,10 @@ class LbApiService(
                 if (agreement.promisecredit > 0.0) {
                     PromiseCredit(
                         agreement.promisecredit,
-                        getClientPromisePayments(sessionId, agreement.agrmid)
+                        getClientPromisePayments(
+                            sessionId,
+                            agreement.agrmid
+                        ).firstOrNull { it.status == 3.toShort() }?.promtill
                     )
                 } else null,
                 if (serviceInfo != null) {
@@ -316,7 +319,6 @@ class LbApiService(
         }
 
     fun getClientPromiseSettings(sessionId: String, agreementId: Long): PromiseSettings {
-        val recPayment = adapter.getRecommendedPayment(sessionId, agreementId, 0L)
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientPPSettings().apply { this.agrm = agreementId },
@@ -324,18 +326,9 @@ class LbApiService(
         ).second.ret.first().let {
             PromiseSettings(
                 isAllowed = it.promiseavailable == 1L,
-//                        (p.balance < 0 && abs(p.balance) > it.promiselimit) -> false
-//                        (p.isCredit) -> false
                 dateLimit = LocalDate.now().plusDays(it.promisetill),
                 maxAmount = it.promisemax,
                 minAmount = it.promisemin,
-                recAmount = if (recPayment < it.promisemin) {
-                    it.promisemin
-                } else if (recPayment > it.promisemax) {
-                    it.promisemax
-                } else {
-                    recPayment
-                },
                 limitAmount = it.promiselimit
             )
         }
@@ -344,18 +337,18 @@ class LbApiService(
     fun getClientPromisePayments(
         sessionId: String,
         agreementId: Long
-    ): String? {
+    ): List<SoapPromisePayment> {
         return adapter.getResponseAsMandatoryType(
             sessionId,
             GetClientPromisePayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId
-                    this.dtfrom = LocalDate.now().minusMonths(0L).toString()
+                    this.dtfrom = LocalDate.now().minusMonths(1L).toString()
                     this.dtto = LocalDate.now().plusMonths(1L).toString()
                 }
             },
             GetClientPromisePaymentsResponse::class.java
-        ).second.ret.firstOrNull()?.promtill
+        ).second.ret
     }
 
     fun getClientPayments(
@@ -468,4 +461,19 @@ class LbApiService(
         },
         DelVgUserBlockScheduleResponse::class.java
     ).second.ret
+
+    fun promisePayment(
+        sessionId: String,
+        agreementId: Long,
+        amount: Double
+    ): Boolean {
+        return adapter.getResponseAsMandatoryType(
+            sessionId,
+            ClientPromisePayment().apply {
+                agrm = agreementId
+                summ = amount
+            },
+            ClientPromisePaymentResponse::class.java
+        ).second.ret == 1L
+    }
 }

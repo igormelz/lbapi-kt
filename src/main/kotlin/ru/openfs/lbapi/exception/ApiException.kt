@@ -3,21 +3,16 @@ package ru.openfs.lbapi.exception
 import io.smallrye.graphql.api.ErrorCode
 
 @ErrorCode("E3000")
-class ApiException: RuntimeException {
-    constructor(message: String) : super(message)
-}
+class ApiException(message: String) : RuntimeException(message)
 
 @ErrorCode("E3001")
-class NotAuthorizeException: RuntimeException {
-    constructor(message: String) : super(message)
-}
+class NotAuthorizeException(message: String) : RuntimeException(message)
 
 @ErrorCode("E3002")
-class NotfoundAccountException: RuntimeException {
-    constructor(message: String) : super(message)
-}
+class NotfoundAccountException(message: String) : RuntimeException(message)
 
 @ErrorCode("E3003")
-class PromisePaymentNotAllowedException: RuntimeException {
-    constructor(message: String) : super(message)
-}
+class PromisePaymentNotAllowedException(message: String) : RuntimeException(message)
+
+@ErrorCode("E3004")
+class PromisePaymentOverdueException(message: String) : RuntimeException(message)

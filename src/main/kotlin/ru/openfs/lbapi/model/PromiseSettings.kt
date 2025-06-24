@@ -7,6 +7,5 @@ data class PromiseSettings(
     val dateLimit: LocalDate,
     val minAmount: Double,
     val maxAmount: Double,
-    val recAmount: Double,
     val limitAmount: Double
 )

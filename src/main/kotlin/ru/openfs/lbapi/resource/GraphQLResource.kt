@@ -184,4 +184,11 @@ class GraphQLResource(
         @Name("sessionId") sessionId: String,
         @Name("recordId") id: Long
     ) = service.delVgUserBlockSchedule(sessionId, id)
+
+    @Mutation
+    fun promisePayment(
+        @Name("sessionId") sessionId: String,
+        @Name("agreementId") agreementId: Long,
+        @Name("amount") amount: Double
+    ): Boolean = service.promisePayment(sessionId, agreementId, amount)
 }
