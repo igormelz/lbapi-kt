@@ -34,7 +34,7 @@ class DbAdapter(
             }.await().indefinitely()
     }
 
-    fun getVGroupsAndServices(agreementId: Long): List<ServiceInfo> {
+    fun getVGroupsAndServices(agreementId: Long): ServiceInfo? {
         return client.preparedQuery(
             """
             select
@@ -105,7 +105,7 @@ class DbAdapter(
                     }
                     // keep only valid services
                     .filterNot { it.tarType == "services" && it.tarRent == 0.0 && it.extService.isEmpty() }
-            }.await().indefinitely()
+            }.await().indefinitely().firstOrNull()
     }
 
 

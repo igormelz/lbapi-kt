@@ -8,8 +8,6 @@ data class AgreementInfo(
     val createDate: String,
     val balance: Double,
     val recPaymentAmount: Double,
-    val defPaymentAmount: Double,
-    @Deprecated("remove and switch to the promiseCredit")
     val promiseCreditAmount: Double,
     val isCredit: Boolean,
     val creditLimitAmount: Double,
@@ -21,6 +19,7 @@ data class AgreementInfo(
 data class PromiseCredit(
     val amount: Double,
     val untilDate: String?,
+    val isActive: Boolean,
 )
 
 data class RentByPeriod(
