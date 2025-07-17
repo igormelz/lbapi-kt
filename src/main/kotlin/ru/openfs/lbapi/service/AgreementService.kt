@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.model.*
 import ru.openfs.lbapi.service.adapter.DbAdapter
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 import ru.openfs.lbapi.utils.FormatUtil.getDateStartMonth
 import ru.openfs.lbapi.utils.FormatUtil.getDateStartNextMonth
 import ru.openfs.lbapi.utils.FormatUtil.isDateTimeAfterNow
@@ -13,10 +14,10 @@ import java.time.Month
 @ApplicationScoped
 class AgreementService(
     private val dbAdapter: DbAdapter,
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter
 ) {
     fun getAgreementsInfo(sessionId: String): List<AgreementInfo> =
-        clientService.withSession(sessionId).request<GetClientAccountResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientAccountResponse> {
             GetClientAccount().apply {
                 this.flt = SoapGetAccountFilter().apply {
                     this.activonly = 1L
@@ -41,7 +42,7 @@ class AgreementService(
         }
 
     private fun getPromiseCredit(sessionId: String, agreementId: Long): PromiseCredit? =
-        clientService.withSession(sessionId).request<GetClientPromisePaymentsResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientPromisePaymentsResponse> {
             GetClientPromisePayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId
@@ -59,7 +60,7 @@ class AgreementService(
 
     private fun getActiveUserBlockSchedule(sessionId: String, agreementId: Long, vgId: Long?): UserBlockSchedule? {
         if (vgId == null) return null
-        return clientService.withSession(sessionId).request<GetVgUserBlockScheduleResponse> {
+        return soapAdapter.withSession(sessionId).request<GetVgUserBlockScheduleResponse> {
             GetVgUserBlockSchedule().apply {
                 this.flt = SoapGetVgUserBlockSchedule().apply {
                     this.agrmid = agreementId
@@ -84,7 +85,7 @@ class AgreementService(
         dateFrom: String? = null,
         dateTo: String? = null
     ): SoapStat =
-        clientService.withSession(sessionId).request<GetClientStatResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
             GetClientStat().apply {
                 this.flt = SoapFilter().apply {
                     this.dtfrom = dateFrom ?: getDateStartMonth()
@@ -105,7 +106,7 @@ class AgreementService(
         dateFrom: String? = null,
         dateTo: String? = null
     ): SoapStat =
-        clientService.withSession(sessionId).request<GetClientStatResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
             GetClientStat().apply {
                 this.flt = SoapFilter().apply {
                     this.dtfrom = dateFrom ?: getDateStartMonth()
@@ -145,7 +146,7 @@ class AgreementService(
 
 
     private fun getRecommendedPayment(sessionId: String, agreementId: Long, mode: Long = 3L): Double =
-        clientService.withSession(sessionId).request<GetRecommendedPaymentResponse> {
+        soapAdapter.withSession(sessionId).request<GetRecommendedPaymentResponse> {
             GetRecommendedPayment().apply {
                 this.id = agreementId
                 this.mode = mode
@@ -154,7 +155,7 @@ class AgreementService(
         }.ret
 
     fun getClientPayments(sessionId: String, agreementId: Long, year: Int? = null): List<PaymentsInfo> =
-        clientService.withSession(sessionId).request<GetClientPaymentsResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientPaymentsResponse> {
             GetClientPayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId

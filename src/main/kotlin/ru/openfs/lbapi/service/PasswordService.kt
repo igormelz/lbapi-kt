@@ -6,22 +6,23 @@ import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.exception.ApiException
 import ru.openfs.lbapi.model.PasswordTemplate
 import ru.openfs.lbapi.service.adapter.EmailAdapter
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 
 @ApplicationScoped
 class PasswordService(
     private val emailAdapter: EmailAdapter,
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter,
 ) {
 
     fun getAccountIsEmailConfirm(login: String): Boolean =
-        clientService.withSession().request<SoapInfoAboutAccountDataConfirmResponse> {
+        soapAdapter.withSession().request<SoapInfoAboutAccountDataConfirmResponse> {
             GetInfoAboutAccountDataConfirm().apply {
                 this.accountlogin = login
             }
         }.isEmailisconfirmed
 
     fun getRecoveryPassword(login: String): SoapRecoverPassword =
-        clientService.withSession().request<RecoverPasswordResponse> {
+        soapAdapter.withSession().request<RecoverPasswordResponse> {
             RecoverPassword().apply {
                 this.login = login
                 this.transport = 0 // email
@@ -31,7 +32,7 @@ class PasswordService(
         }.ret.first()
 
     fun updatePasswordByCode(login: String, password: String, code: String): String? =
-        clientService.withSession().request<UpdatePasswordByCodeResponse> {
+        soapAdapter.withSession().request<UpdatePasswordByCodeResponse> {
             UpdatePasswordByCode().apply {
                 this.`val` = SoapUpdatePasswordByCode().apply {
                     this.login = login
@@ -42,7 +43,7 @@ class PasswordService(
         }.ret
 
     fun updatePasswordByToken(password: String, token: String): String? =
-        clientService.withSession().request<UpdatePasswordByTokenResponse> {
+        soapAdapter.withSession().request<UpdatePasswordByTokenResponse> {
             UpdatePasswordByToken().apply {
                 this.`val` = SoapUpdatePasswordByToken().apply {
                     this.password = password
@@ -52,7 +53,7 @@ class PasswordService(
         }.ret
 
     private fun getOptionByName(sessionId: String, optionName: String? = "pass_length"): SoapOption? =
-        clientService.withSession(sessionId).request<GetOptionByNameResponse> {
+        soapAdapter.withSession(sessionId).request<GetOptionByNameResponse> {
             GetOptionByName().apply {
                 this.name = optionName
             }
@@ -61,7 +62,7 @@ class PasswordService(
     fun getPassTemplate(sessionId: String): PasswordTemplate {
         if (getOptionByName(sessionId)?.availabilitytype?.toInt() != 0) throw ApiException("not allowed")
 
-        return clientService.withSession(sessionId).request<GetPassTemplatesResponse> {
+        return soapAdapter.withSession(sessionId).request<GetPassTemplatesResponse> {
             GetPassTemplates().apply {
                 this.flt = SoapFilter().apply {
                     this.objecttype = "account"
@@ -82,7 +83,7 @@ class PasswordService(
     }
 
     fun updatePassword(sessionId: String, oldPass: String, newPass: String): Boolean =
-        clientService.withSession(sessionId).request<UpdClientPassResponse> {
+        soapAdapter.withSession(sessionId).request<UpdClientPassResponse> {
             UpdClientPass().apply {
                 this.oldpass = oldPass
                 this.newpass = newPass

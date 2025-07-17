@@ -4,16 +4,17 @@ import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.model.UserBlockSchedule
 import ru.openfs.lbapi.model.UserBlockTemplate
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 import ru.openfs.lbapi.utils.FormatUtil.isDateTimeAfterNow
 import java.time.LocalDate
 
 @ApplicationScoped
 class BlockingService(
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter,
 ) {
 
     fun getUserBlockTemplate(sessionId: String, agreementId: Long, vgId: Long): UserBlockTemplate? =
-        clientService.withSession(sessionId).request<GetUserBlockTemplateResponse> {
+        soapAdapter.withSession(sessionId).request<GetUserBlockTemplateResponse> {
             GetUserBlockTemplate().apply {
                 this.flt = SoapGetUserBlockTemplate().apply {
                     this.agrmid = agreementId
@@ -30,7 +31,7 @@ class BlockingService(
         }
 
     fun getVgUserBlockSchedule(sessionId: String, agreementId: Long, vgId: Long): List<UserBlockSchedule> =
-        clientService.withSession(sessionId).request<GetVgUserBlockScheduleResponse> {
+        soapAdapter.withSession(sessionId).request<GetVgUserBlockScheduleResponse> {
             GetVgUserBlockSchedule().apply {
                 this.flt = SoapGetVgUserBlockSchedule().apply {
                     this.agrmid = agreementId
@@ -48,7 +49,7 @@ class BlockingService(
         }
 
     fun setVgUserBlockSchedule(sessionId: String, vgId: Long, startDate: LocalDate, endDate: LocalDate): Long =
-        clientService.withSession(sessionId).request<SetVgUserBlockScheduleResponse> {
+        soapAdapter.withSession(sessionId).request<SetVgUserBlockScheduleResponse> {
             SetVgUserBlockSchedule().apply {
                 this.`val` = SoapVgUserBlockSchedule().apply {
                     this.comment = "test"
@@ -61,7 +62,7 @@ class BlockingService(
         }.ret
 
     fun delVgUserBlockSchedule(sessionId: String, recordId: Long): Long =
-        clientService.withSession(sessionId).request<DelVgUserBlockScheduleResponse> {
+        soapAdapter.withSession(sessionId).request<DelVgUserBlockScheduleResponse> {
             DelVgUserBlockSchedule().apply {
                 this.id = recordId
             }

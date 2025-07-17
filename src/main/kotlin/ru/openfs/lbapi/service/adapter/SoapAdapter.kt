@@ -15,7 +15,15 @@ class SoapAdapter(
     private val producer: ProducerTemplate
 ) {
 
-    fun loginClient(login: String, password: String): String =
+    fun withouSession(): SessionRequestBuilder {
+        return SessionRequestBuilder(this)
+    }
+
+    fun withSession(sessionId: String): SessionRequestBuilder {
+        return SessionRequestBuilder(this, sessionId)
+    }
+
+    fun startClientSession(login: String, password: String): String =
         getResponseAsMandatoryType(
             null,
             ClientLogin().apply {
@@ -47,12 +55,17 @@ class SoapAdapter(
                     )
 
                     when (err) {
-                        "Promise payments already assigned" -> throw PromisePaymentNotAllowedException(err)
-                        "Client not authorized" -> throw NotAuthorizeException(err)
-                        "Account not found" -> throw NotfoundAccountException(err)
-                        "Promise payment is not available, last payment is overdue" -> throw PromisePaymentOverdueException(
-                            err
-                        )
+                        "Promise payments already assigned" ->
+                            throw PromisePaymentNotAllowedException(err)
+
+                        "Client not authorized" ->
+                            throw NotAuthorizeException(err)
+
+                        "Account not found" ->
+                            throw NotfoundAccountException(err)
+
+                        "Promise payment is not available, last payment is overdue" ->
+                            throw PromisePaymentOverdueException(err)
 
                         else -> throw ApiException(err)
                     }

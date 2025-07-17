@@ -1,6 +1,4 @@
-package ru.openfs.lbapi.service
-
-import ru.openfs.lbapi.service.adapter.SoapAdapter
+package ru.openfs.lbapi.service.adapter
 
 class SessionRequestBuilder(
     private val adapter: SoapAdapter,

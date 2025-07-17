@@ -2,29 +2,30 @@ package ru.openfs.lbapi.service
 
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 
 @ApplicationScoped
 class MessageService(
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter,
 ) {
 
     fun getAccountNotices(sessionId: String): List<SoapAccountNotices?> =
-        clientService.withSession(sessionId).request<GetAccountNoticesResponse> {
+        soapAdapter.withSession(sessionId).request<GetAccountNoticesResponse> {
             GetAccountNotices()
         }.ret
 
     fun getSharedPostsCategories(sessionId: String): List<SoapSharedPostsCategory?> =
-        clientService.withSession(sessionId).request<GetSharedPostsCategoriesResponse> {
+        soapAdapter.withSession(sessionId).request<GetSharedPostsCategoriesResponse> {
             GetSharedPostsCategories()
         }.ret
 
     fun getAccountSharedPostsCategories(sessionId: String): List<SoapAccountSharedPostCategories?> =
-        clientService.withSession(sessionId).request<GetAccountSharedPostCategoriesResponse> {
+        soapAdapter.withSession(sessionId).request<GetAccountSharedPostCategoriesResponse> {
             GetAccountSharedPostCategories()
         }.ret
 
     fun getSharedPosts(sessionId: String): List<SoapSharedPost?> =
-        clientService.withSession(sessionId).request<GetClientSharedPostsResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientSharedPostsResponse> {
             GetClientSharedPosts().apply {
                 this.flt = SoapFilter().apply {
                     //this.pgnum = 1

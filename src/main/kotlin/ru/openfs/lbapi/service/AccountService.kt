@@ -5,13 +5,14 @@ import ru.openfs.lbapi.api3.GetClientAccount
 import ru.openfs.lbapi.api3.GetClientAccountResponse
 import ru.openfs.lbapi.api3.SoapAccountFull
 import ru.openfs.lbapi.api3.SoapGetAccountFilter
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 
 @ApplicationScoped
 class AccountService(
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter,
 ) {
     fun getAccounts(sessionId: String): SoapAccountFull =
-        clientService.withSession(sessionId).request<GetClientAccountResponse> {
+        soapAdapter.withSession(sessionId).request<GetClientAccountResponse> {
             GetClientAccount().apply {
                 this.flt = SoapGetAccountFilter().apply {
                     this.activonly = 1L

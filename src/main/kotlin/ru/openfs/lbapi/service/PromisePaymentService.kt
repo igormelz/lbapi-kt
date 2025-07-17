@@ -6,15 +6,16 @@ import ru.openfs.lbapi.api3.ClientPromisePaymentResponse
 import ru.openfs.lbapi.api3.GetClientPPSettings
 import ru.openfs.lbapi.api3.GetClientPPSettingsResponse
 import ru.openfs.lbapi.model.PromiseSettings
+import ru.openfs.lbapi.service.adapter.SoapAdapter
 import java.time.LocalDate
 
 @ApplicationScoped
 class PromisePaymentService(
-    private val clientService: SoapClientService,
+    private val soapAdapter: SoapAdapter,
 ) {
 
     fun getClientPromiseSettings(sessionId: String, agreementId: Long): PromiseSettings {
-        return clientService.withSession(sessionId).request<GetClientPPSettingsResponse> {
+        return soapAdapter.withSession(sessionId).request<GetClientPPSettingsResponse> {
             GetClientPPSettings().apply { this.agrm = agreementId }
         }.ret.first().let {
             PromiseSettings(
@@ -28,7 +29,7 @@ class PromisePaymentService(
     }
 
     fun promisePayment(sessionId: String, agreementId: Long, amount: Double): Boolean =
-        clientService.withSession(sessionId).request<ClientPromisePaymentResponse> {
+        soapAdapter.withSession(sessionId).request<ClientPromisePaymentResponse> {
             ClientPromisePayment().apply {
                 agrm = agreementId
                 summ = amount
