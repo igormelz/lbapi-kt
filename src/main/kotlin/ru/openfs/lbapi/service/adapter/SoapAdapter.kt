@@ -15,7 +15,7 @@ class SoapAdapter(
     private val producer: ProducerTemplate
 ) {
 
-    fun withouSession(): SessionRequestBuilder {
+    fun noSession(): SessionRequestBuilder {
         return SessionRequestBuilder(this)
     }
 

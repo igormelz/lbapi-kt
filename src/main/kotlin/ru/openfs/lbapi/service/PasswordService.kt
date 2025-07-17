@@ -15,14 +15,14 @@ class PasswordService(
 ) {
 
     fun getAccountIsEmailConfirm(login: String): Boolean =
-        soapAdapter.withSession().request<SoapInfoAboutAccountDataConfirmResponse> {
+        soapAdapter.noSession().request<SoapInfoAboutAccountDataConfirmResponse> {
             GetInfoAboutAccountDataConfirm().apply {
                 this.accountlogin = login
             }
         }.isEmailisconfirmed
 
     fun getRecoveryPassword(login: String): SoapRecoverPassword =
-        soapAdapter.withSession().request<RecoverPasswordResponse> {
+        soapAdapter.noSession().request<RecoverPasswordResponse> {
             RecoverPassword().apply {
                 this.login = login
                 this.transport = 0 // email
@@ -32,7 +32,7 @@ class PasswordService(
         }.ret.first()
 
     fun updatePasswordByCode(login: String, password: String, code: String): String? =
-        soapAdapter.withSession().request<UpdatePasswordByCodeResponse> {
+        soapAdapter.noSession().request<UpdatePasswordByCodeResponse> {
             UpdatePasswordByCode().apply {
                 this.`val` = SoapUpdatePasswordByCode().apply {
                     this.login = login
@@ -43,7 +43,7 @@ class PasswordService(
         }.ret
 
     fun updatePasswordByToken(password: String, token: String): String? =
-        soapAdapter.withSession().request<UpdatePasswordByTokenResponse> {
+        soapAdapter.noSession().request<UpdatePasswordByTokenResponse> {
             UpdatePasswordByToken().apply {
                 this.`val` = SoapUpdatePasswordByToken().apply {
                     this.password = password
