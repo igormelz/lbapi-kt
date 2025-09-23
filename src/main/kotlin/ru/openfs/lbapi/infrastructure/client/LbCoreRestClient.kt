@@ -1,4 +1,4 @@
-package ru.openfs.lbapi.client
+package ru.openfs.lbapi.infrastructure.client
 
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.CookieParam

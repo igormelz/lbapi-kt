@@ -1,4 +1,4 @@
-package ru.openfs.lbapi.camel
+package ru.openfs.lbapi.infrastructure.adapter
 
 import jakarta.inject.Singleton
 import org.apache.camel.builder.RouteBuilder
@@ -7,7 +7,7 @@ import org.apache.camel.model.dataformat.SoapDataFormat
 import ru.openfs.lbapi.api3.Api3PortType
 
 @Singleton
-class CamelRoute : RouteBuilder() {
+class CamelSoapAdapter : RouteBuilder() {
 
     override fun configure() {
 
