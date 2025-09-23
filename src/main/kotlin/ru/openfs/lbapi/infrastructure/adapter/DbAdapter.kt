@@ -61,9 +61,11 @@ class DbAdapter(
             	sc.service_type,
             	COALESCE(sc.dtv_type, 0) as usecas,
             	va.address
-            from billing.vgroups v inner join billing.tarifs t using (tar_id) inner join billing.vgroups_addr va using (vg_id)
-            left join (select * from billing.services where need_calc = 1) s USING (vg_id)
-            left join billing.service_categories sc on (sc.serv_cat_idx = s.serv_cat_idx and v.tar_id = sc.tar_id)
+            from billing.vgroups v 
+                inner join billing.tarifs t using (tar_id) 
+                inner join billing.vgroups_addr va using (vg_id)
+                left join (select * from billing.services where need_calc = 1) s USING (vg_id)
+                left join billing.service_categories sc on (sc.serv_cat_idx = s.serv_cat_idx and v.tar_id = sc.tar_id)
             where agrm_id = ?
         """.trimIndent()
         ).execute(Tuple.of(agreementId))
