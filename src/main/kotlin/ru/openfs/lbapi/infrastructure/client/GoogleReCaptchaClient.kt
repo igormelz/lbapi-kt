@@ -18,6 +18,6 @@ fun interface GoogleReCaptchaClient {
 data class GoogleReCaptchaResponse(
     val success: Boolean?,
     val hostname: String?,
-    @JsonProperty("error_codes")
+    @param:JsonProperty("error_codes")
     val errorCodes: List<String>?,
 )

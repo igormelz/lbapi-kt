@@ -70,7 +70,7 @@ data class ExtService(
                         else -> "включена"
                     }
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return null
             }
         }

@@ -1,31 +1,13 @@
 package ru.openfs.lbapi.domain.password
 
 import jakarta.enterprise.context.ApplicationScoped
-import ru.openfs.lbapi.infrastructure.adapter.EmailAdapter
-import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
-import ru.openfs.lbapi.api3.GetOptionByName
-import ru.openfs.lbapi.api3.GetOptionByNameResponse
-import ru.openfs.lbapi.api3.GetPassTemplates
-import ru.openfs.lbapi.api3.GetPassTemplatesResponse
-import ru.openfs.lbapi.api3.RecoverPassword
-import ru.openfs.lbapi.api3.RecoverPasswordResponse
-import ru.openfs.lbapi.api3.SoapFilter
-import ru.openfs.lbapi.api3.SoapOption
-import ru.openfs.lbapi.api3.SoapRecoverPassword
-import ru.openfs.lbapi.api3.SoapUpdatePasswordByCode
-import ru.openfs.lbapi.api3.SoapUpdatePasswordByToken
-import ru.openfs.lbapi.api3.UpdClientPass
-import ru.openfs.lbapi.api3.UpdClientPassResponse
-import ru.openfs.lbapi.api3.UpdatePasswordByCode
-import ru.openfs.lbapi.api3.UpdatePasswordByCodeResponse
-import ru.openfs.lbapi.api3.UpdatePasswordByToken
-import ru.openfs.lbapi.api3.UpdatePasswordByTokenResponse
+import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.common.exception.ApiException
 import ru.openfs.lbapi.domain.password.model.PasswordTemplate
+import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 
 @ApplicationScoped
 class UserPasswordService(
-    private val emailAdapter: EmailAdapter,
     private val soapAdapter: SoapAdapter,
 ) {
 

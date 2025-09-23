@@ -17,7 +17,7 @@ class EmailAdapter(private val mailer: ReactiveMailer) {
         val htmlBody = """
                  <html>
                                 <body>
-                                    <h1>Hello! ${'$'}{name}</h1>
+                                    <h1>Hello! ${name}</h1>
                                     <p>This is an HTML email with an inline image:</p>
                                     <img src="cid:logo@scrollnet"/>
                                 </body>
