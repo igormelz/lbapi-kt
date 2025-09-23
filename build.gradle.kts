@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.2.0"
-    kotlin("plugin.allopen") version "2.2.0"
+    kotlin("jvm") version "2.2.10"
+    kotlin("plugin.allopen") version "2.2.10"
     id("io.quarkus")
     id("com.github.bjornvester.wsdl2java") version "2.0.2"
 }
@@ -33,7 +33,7 @@ dependencies {
 }
 
 group = "ru.openfs"
-version = "1.0.9"
+version = "1.1.0"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
