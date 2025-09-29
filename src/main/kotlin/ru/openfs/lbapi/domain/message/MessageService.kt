@@ -1,18 +1,9 @@
 package ru.openfs.lbapi.domain.message
 
 import jakarta.enterprise.context.ApplicationScoped
+import ru.openfs.lbapi.api3.*
+import ru.openfs.lbapi.domain.message.model.SharedPost
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
-import ru.openfs.lbapi.api3.GetAccountSharedPostCategories
-import ru.openfs.lbapi.api3.GetAccountSharedPostCategoriesResponse
-import ru.openfs.lbapi.api3.GetClientSharedPosts
-import ru.openfs.lbapi.api3.GetClientSharedPostsResponse
-import ru.openfs.lbapi.api3.GetSharedPostsCategories
-import ru.openfs.lbapi.api3.GetSharedPostsCategoriesResponse
-import ru.openfs.lbapi.api3.SoapAccountSharedPostCategories
-import ru.openfs.lbapi.api3.SoapFilter
-import ru.openfs.lbapi.api3.SoapOrderby
-import ru.openfs.lbapi.api3.SoapSharedPost
-import ru.openfs.lbapi.api3.SoapSharedPostsCategory
 
 @ApplicationScoped
 class MessageService(
@@ -29,12 +20,10 @@ class MessageService(
             GetAccountSharedPostCategories()
         }.ret
 
-    fun getSharedPosts(sessionId: String): List<SoapSharedPost?> =
+    fun getSharedPosts(sessionId: String): List<SharedPost> =
         soapAdapter.withSession(sessionId).request<GetClientSharedPostsResponse> {
             GetClientSharedPosts().apply {
                 this.flt = SoapFilter().apply {
-                    //this.pgnum = 1
-                    //this.pgsize = 1
                     this.status = "1"
                 }
                 this.ord.add(
@@ -49,6 +38,12 @@ class MessageService(
                     }
                 )
             }
-        }.ret
+        }.ret.map {
+            SharedPost(
+                postedAt = it.posttime,
+                subject = it.subject,
+                text = it.text,
+            )
+        }
 
 }
