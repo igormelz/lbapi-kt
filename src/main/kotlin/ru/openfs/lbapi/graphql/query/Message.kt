@@ -4,6 +4,7 @@ import org.eclipse.microprofile.graphql.GraphQLApi
 import org.eclipse.microprofile.graphql.Name
 import org.eclipse.microprofile.graphql.Query
 import ru.openfs.lbapi.domain.message.MessageService
+import ru.openfs.lbapi.domain.message.model.SharedPost
 
 @GraphQLApi
 class Message(
@@ -11,7 +12,7 @@ class Message(
 ) {
 
     @Query
-    fun getSharedPosts(@Name("sessionId") sessionId: String) =
+    fun getSharedPosts(@Name("sessionId") sessionId: String): List<SharedPost> =
         service.getSharedPosts(sessionId)
 
     @Query
