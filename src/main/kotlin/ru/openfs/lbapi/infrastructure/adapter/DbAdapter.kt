@@ -50,7 +50,7 @@ class DbAdapter(
             	t.rent_as_service,
             	t.additional,
             	t.shape as tarShape,
-            	s.need_calc,
+            	COALESCE(s.need_calc, 0) as need_calc,
             	s.state,
             	s.serv_cat_idx,
             	sc.above,
@@ -58,15 +58,18 @@ class DbAdapter(
             	sc.descr_full,
             	sc.rent_period,
             	sc.rent_period_month,
-            	sc.service_type,
+            	sc.service_type, 
             	COALESCE(sc.dtv_type, 0) as usecas,
-            	va.address
+            	va.address,
+                sc.begin_period,
+                s.activated,
+                s.timefrom
             from billing.vgroups v 
                 inner join billing.tarifs t using (tar_id) 
                 inner join billing.vgroups_addr va using (vg_id)
                 left join (select * from billing.services where need_calc = 1) s USING (vg_id)
                 left join billing.service_categories sc on (sc.serv_cat_idx = s.serv_cat_idx and v.tar_id = sc.tar_id)
-            where agrm_id = ?
+            where v.archive = 0 and agrm_id = ?
         """.trimIndent()
         ).execute(Tuple.of(agreementId))
             .map { rows ->
@@ -82,6 +85,7 @@ class DbAdapter(
                         val extService = rows.mapNotNull { ExtService.fromRow(it) }.filter { it.rent > 0 }
 
                         val rentSummary = (listOf(rentPeriod to tarRent) + extService.map { it.rentPeriod to it.rent })
+                            .filter { it.second > 0 }
                             .groupBy({ it.first }, { it.second })
                             .map { (period, rent) ->
                                 RentByPeriod(
@@ -91,7 +95,7 @@ class DbAdapter(
                             }
 
                         ServiceInfo(
-                            id = k,
+                            id = k, // vg_id
                             login = row.getString("login"),
                             address = row.getString("address"),
                             tarType = mapTarType(row.getInteger("tarType"), row.getInteger("usecas")),

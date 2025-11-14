@@ -16,4 +16,10 @@ class Payment(
         @Name("agreementId") agreementId: Long,
         @Name("year") year: Int?,
     ): List<PaymentInfo> = service.getClientPayments(sessionId, agreementId, year)
+
+    @Query
+    fun getPayment(
+        @Name("sessionId") sessionId: String,
+        @Name("paymentId") paymentId: String,
+    ): String = service.getPayment(sessionId, paymentId)
 }

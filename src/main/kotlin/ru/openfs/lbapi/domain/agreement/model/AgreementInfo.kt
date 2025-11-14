@@ -1,6 +1,5 @@
 package ru.openfs.lbapi.domain.agreement.model
 
-import io.vertx.mutiny.sqlclient.Row
 import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
 
 data class AgreementInfo(
@@ -15,6 +14,7 @@ data class AgreementInfo(
     val serviceInfo: ServiceInfo?,
     val promiseCredit: PromiseCredit?,
     val activeUserBlockSchedule: UserBlockSchedule?,
+    val changeTariff: ChangeTariff?,
 )
 
 data class PromiseCredit(
@@ -42,37 +42,3 @@ data class ServiceInfo(
     val extService: List<ExtService>,
     val rentSummary: List<RentByPeriod>
 )
-
-data class ExtService(
-    val descr: String,
-    val rent: Double,
-    val rentPeriod: String,
-    val state: Long,
-    val stateDescr: String
-) {
-    companion object {
-        fun fromRow(row: Row): ExtService? {
-            try {
-                return ExtService(
-                    descr = row.getString("descr"),
-                    rent = row.getDouble("above"),
-                    rentPeriod = when (row.getInteger("rent_period")) {
-                        0 -> "разовое"
-                        1 -> "в мес."
-                        2 -> "в день"
-                        3 -> "ежедневное равными долями"
-                        4 -> "в год"
-                        else -> "NaN"
-                    },
-                    state = row.getLong("state"),
-                    stateDescr = when (row.getInteger("state")) {
-                        0, 2 -> "отключена"
-                        else -> "включена"
-                    }
-                )
-            } catch (_: Exception) {
-                return null
-            }
-        }
-    }
-}

@@ -9,6 +9,8 @@ import ru.openfs.lbapi.api3.GetClientPromisePayments
 import ru.openfs.lbapi.api3.GetClientPromisePaymentsResponse
 import ru.openfs.lbapi.api3.GetClientStat
 import ru.openfs.lbapi.api3.GetClientStatResponse
+import ru.openfs.lbapi.api3.GetClientVgroups
+import ru.openfs.lbapi.api3.GetClientVgroupsResponse
 import ru.openfs.lbapi.api3.GetRecommendedPayment
 import ru.openfs.lbapi.api3.GetRecommendedPaymentResponse
 import ru.openfs.lbapi.api3.GetVgUserBlockSchedule
@@ -23,6 +25,7 @@ import ru.openfs.lbapi.domain.agreement.model.PromiseCredit
 import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
 import ru.openfs.lbapi.common.utils.FormatUtil
 import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
+import ru.openfs.lbapi.domain.agreement.model.ChangeTariff
 import java.time.LocalDate
 
 @ApplicationScoped
@@ -51,7 +54,8 @@ class AgreementService(
                 creditLimitAmount = agreement.credit,
                 serviceInfo = serviceInfo,
                 promiseCredit = getPromiseCredit(sessionId, agreement.agrmid).takeIf { agreement.promisecredit != 0.0 },
-                activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id)
+                activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id),
+                changeTariff = getChangeTariff(sessionId, agreement.agrmid),
             )
         }
 
@@ -167,5 +171,21 @@ class AgreementService(
                 this.isConsiderinstallment = true
             }
         }.ret
+
+    fun getChangeTariff(sessionId: String, agreementId: Long) =
+        soapAdapter.withSession(sessionId).request<GetClientVgroupsResponse> {
+            GetClientVgroups().apply {
+                this.flt = SoapFilter().apply {
+                    this.agrmid = agreementId
+                }
+            }
+        }.ret.firstOrNull()?.tarrasp?.firstOrNull()?.let {
+            ChangeTariff(
+                it.taridnew,
+                it.tarnewname,
+                it.rent,
+                it.changetime
+            )
+        }
 
 }
