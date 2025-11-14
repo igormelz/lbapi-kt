@@ -14,7 +14,7 @@ data class AgreementInfo(
     val serviceInfo: ServiceInfo?,
     val promiseCredit: PromiseCredit?,
     val activeUserBlockSchedule: UserBlockSchedule?,
-    val changeTariff: ChangeTariff?,
+    val changeTariff: ChangeTariff? = null,
 )
 
 data class PromiseCredit(
@@ -40,5 +40,6 @@ data class ServiceInfo(
     val blockedType: Long,
     val rentPeriod: String,
     val extService: List<ExtService>,
-    val rentSummary: List<RentByPeriod>
+    val rentSummary: List<RentByPeriod>,
+    val changeTariff: ChangeTariff?,
 )

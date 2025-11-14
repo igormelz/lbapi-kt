@@ -55,7 +55,6 @@ class AgreementService(
                 serviceInfo = serviceInfo,
                 promiseCredit = getPromiseCredit(sessionId, agreement.agrmid).takeIf { agreement.promisecredit != 0.0 },
                 activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id),
-                changeTariff = getChangeTariff(sessionId, agreement.agrmid),
             )
         }
 

@@ -31,9 +31,9 @@ object FormatUtil {
 
     fun nextPaymentDate(
         startDate: LocalDate,
-        intervalMonths: Long = 6
+        intervalMonths: Long = 6,
+        today: LocalDate = LocalDate.now()
     ): LocalDate {
-        val today = LocalDate.now()
         if (today.isBefore(startDate)) return startDate
 
         // total months difference (may be 0)
