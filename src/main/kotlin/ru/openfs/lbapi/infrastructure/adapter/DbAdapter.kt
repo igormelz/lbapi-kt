@@ -7,11 +7,12 @@ import io.vertx.mutiny.sqlclient.Tuple
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.common.utils.FormatUtil.convertBpsToReadableFormat
 import ru.openfs.lbapi.common.utils.FormatUtil.nextPaymentDate
-import ru.openfs.lbapi.domain.agreement.model.ChangeTariff
 import ru.openfs.lbapi.domain.agreement.model.ClientVGroup
 import ru.openfs.lbapi.domain.agreement.model.ExtService
 import ru.openfs.lbapi.domain.agreement.model.RentByPeriod
 import ru.openfs.lbapi.domain.agreement.model.ServiceInfo
+import java.time.LocalDate
+import java.util.Date
 
 @ApplicationScoped
 class DbAdapter(
@@ -41,50 +42,53 @@ class DbAdapter(
     fun getVGroupsAndServices(agreementId: Long): ServiceInfo? {
         return client.preparedQuery(
             """
-                        select
-                        	v.vg_id,
-                        	v.login,
-                        	v.blocked,
-                        	v.amount,
-                        	v.acc_ondate,
-                        	t.descr as tarName,
-                        	t.descr_full as tarDescr,
-                        	t.`type` as tarType,
-                        	t.rent as tarRent,
-                        	t.rent_as_service,
-                        	t.additional,
-                        	t.shape as tarShape,
-                        	COALESCE(s.need_calc, 0) as need_calc,
-                        	s.state,
-                        	s.serv_cat_idx,
-                        	sc.above,
-                        	sc.descr,
-                        	sc.descr_full,
-                        	sc.rent_period,
-                        	sc.rent_period_month,
-                        	sc.service_type, 
-                        	COALESCE(sc.dtv_type, 0) as usecas,
-                        	va.address,
-                            sc.begin_period,
-                            s.activated,
-                            s.timefrom,
-                            tr.tar_new_id as trf_tar_id,
-                            tr.change_time as trf_change_date_time,
-                            trf.rent as trf_rent,
-                            trf.descr as trf_descr,
-                            tsc.above as trf_above,
-                            tsc.rent_period as trf_rent_period,
-                            tsc.rent_period_month as trf_rent_period_month
-                        from billing.vgroups v 
-                            inner join billing.tarifs t using (tar_id) 
-                            inner join billing.vgroups_addr va using (vg_id)
-                            left join (select * from billing.services where need_calc = 1) s USING (vg_id)
-                            left join billing.service_categories sc on (sc.serv_cat_idx = s.serv_cat_idx and v.tar_id = sc.tar_id)
-                            left join billing.tarifs_rasp tr using (vg_id)
-                            left join billing.tarifs trf on (trf.tar_id = tr.tar_id_new)
-                            left join billing.service_categories tsc on (tsc.serv_cat_idx = tr.serv_cat_idx and tsc.tar_id = tr.tar_id_new)
-            where v.archive = 0 and agrm_id = ?
-        """.trimIndent()
+SELECT
+    v.vg_id,
+    v.login,
+    v.blocked,
+    v.amount,
+    v.acc_ondate,
+    t.descr AS tarName,
+    t.descr_full AS tarDescr,
+    t.type AS tarType,
+    t.rent AS tarRent,
+    t.rent_as_service,
+    t.additional,
+    t.shape AS tarShape,
+    COALESCE(s.need_calc, 0) AS need_calc,
+    COALESCE(tm.rent, 0) tm_rent,
+    tm.timeto tm_timeto,
+    s.state,
+    s.serv_cat_idx,
+    sc.above,
+    sc.descr,
+    sc.descr_full,
+    sc.rent_period,
+    COALESCE(sc.rent_period_month, 0) as rent_period_month,
+    sc.service_type, 
+    COALESCE(sc.dtv_type, 0) AS usecas,
+    va.address,
+    sc.begin_period,
+    s.activated,
+    s.timefrom,
+    tr.tar_id_new AS trf_tar_id,
+    tr.change_time AS trf_change_date_time,
+    trf.rent AS trf_rent,
+    trf.descr AS trf_descr,
+    tsc.above AS trf_above,
+    tsc.rent_period AS trf_rent_period,
+    tsc.rent_period_month AS trf_rent_period_month
+FROM billing.vgroups v 
+INNER JOIN billing.tarifs t ON v.tar_id = t.tar_id
+INNER JOIN billing.vgroups_addr va ON v.vg_id = va.vg_id
+LEFT JOIN billing.services s ON v.vg_id = s.vg_id AND s.need_calc = 1 AND s.state = 3
+left join billing.tariff_modifiers tm on tm.tar_id = t.tar_id and tm.vg_id = v.vg_id and tm.service_id = s.service_id 
+LEFT JOIN billing.service_categories sc ON sc.serv_cat_idx = s.serv_cat_idx AND v.tar_id = sc.tar_id
+LEFT JOIN billing.tarifs_rasp tr ON v.vg_id = tr.vg_id
+LEFT JOIN billing.tarifs trf ON trf.tar_id = tr.tar_id_new
+LEFT JOIN billing.service_categories tsc ON tsc.serv_cat_idx = tr.serv_cat_idx AND tsc.tar_id = tr.tar_id_new
+WHERE v.archive = 0 AND v.agrm_id = ?
+""".trimIndent()
         ).execute(Tuple.of(agreementId))
             .map { rows ->
                 rows.groupBy { it.getLong("vg_id") }
@@ -121,7 +125,7 @@ class DbAdapter(
                             rentPeriod = rentPeriod,
                             extService = extService,
                             rentSummary = rentSummary,
-                            changeTariff = changeTariff
+                            changeTo = changeTariff
                         )
                     }
                     // keep only valid services
@@ -129,34 +133,39 @@ class DbAdapter(
             }.await().indefinitely().firstOrNull()
     }
 
-    fun mapChangeTariff(row: Row): ChangeTariff? {
+    fun mapChangeTariff(row: Row): ExtService? {
         return row.getLong("trf_tar_id")?.let {
-            ChangeTariff(
-                tarId = it,
-                tarName = row.getString("trf_descr"),
-                rent = row.getDouble("trf_rent"),
-                changeDateTime = row.getString("trf_change_date_time"),
+            ExtService(
+                descr = row.getString("trf_descr"),
+                rent = row.getDouble("trf_above"),
+                rentPeriod = mapRentPeriod(row.getInteger("trf_rent_period"), row.getInteger("trf_rent_period_month")),
+                nextPayDate = row.getLocalDate("trf_change_date_time").toString(),
+                state = 0,
+                stateDescr = "change"
             )
         }
     }
+
+    private fun mapRentPeriod(rp: Int, rpm: Int): String =
+        when (rp) {
+            0 -> "разовое"
+            1 -> "в мес."
+            2 -> "в день"
+            3 -> "ежедневное равными долями"
+            4 -> if (rpm == 12) "в год" else "за 6 мес."
+            else -> "NaN"
+        }
+
     fun mapService(row: Row): ExtService? {
+        if(row.getInteger("need_calc") == 0) return null
         return try {
-            if (row.getInteger("need_calc") == 0 || row.getInteger("state") != 3) {
-                null
-            } else {
                 val rp = row.getInteger("rent_period")
                 val rpm = row.getInteger("rent_period_month")
+                val tr = row.getDouble("tm_rent")
                 ExtService(
                     descr = row.getString("descr"),
-                    rent = row.getDouble("above"),
-                    rentPeriod = when (rp) {
-                        0 -> "разовое"
-                        1 -> "в мес."
-                        2 -> "в день"
-                        3 -> "ежедневное равными долями"
-                        4 -> if (rpm == 12) "в год" else "за 6 мес."
-                        else -> "NaN"
-                    },
+                    rent = if(tr > 0) tr else row.getDouble("above"),
+                    rentPeriod = mapRentPeriod(rp, rpm),
                     state = row.getLong("state"),
                     stateDescr = when (row.getInteger("state")) {
                         0, 2 -> "отключена"
@@ -176,11 +185,10 @@ class DbAdapter(
                                 intervalMonths = rpm.toLong()
                             ).toString()
 
-                            else -> ""
+                            else -> null
                         }
-                    } else ""
+                    } else row.getLocalDate("tm_timeto").takeIf { it.isAfter(LocalDate.now()) }.toString()
                 )
-            }
         } catch (e: Exception) {
             Log.warn("Exception while parsing ExtService; ${e.message}")
             null

@@ -84,7 +84,7 @@ class AgreementService(
                     this.vgid = vgId
                 }
             }
-        }.ret.firstOrNull() { it.timeto.isDateTimeAfterNow() }?.let {
+        }.ret.firstOrNull { it.timeto.isDateTimeAfterNow() }?.let {
             UserBlockSchedule(
                 it.recordid,
                 it.creationdate,
@@ -171,20 +171,20 @@ class AgreementService(
             }
         }.ret
 
-    fun getChangeTariff(sessionId: String, agreementId: Long) =
-        soapAdapter.withSession(sessionId).request<GetClientVgroupsResponse> {
-            GetClientVgroups().apply {
-                this.flt = SoapFilter().apply {
-                    this.agrmid = agreementId
-                }
-            }
-        }.ret.firstOrNull()?.tarrasp?.firstOrNull()?.let {
-            ChangeTariff(
-                it.taridnew,
-                it.tarnewname,
-                it.rent,
-                it.changetime
-            )
-        }
+//    fun getChangeTariff(sessionId: String, agreementId: Long) =
+//        soapAdapter.withSession(sessionId).request<GetClientVgroupsResponse> {
+//            GetClientVgroups().apply {
+//                this.flt = SoapFilter().apply {
+//                    this.agrmid = agreementId
+//                }
+//            }
+//        }.ret.firstOrNull()?.tarrasp?.firstOrNull()?.let {
+//            ChangeTariff(
+//                it.taridnew,
+//                it.tarnewname,
+//                it.rent,
+//                it.changetime
+//            )
+//        }
 
 }
