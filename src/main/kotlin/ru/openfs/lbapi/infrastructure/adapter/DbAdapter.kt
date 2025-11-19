@@ -186,7 +186,7 @@ WHERE v.archive = 0 AND v.agrm_id = ?
 
                         else -> null
                     }
-                } else row.getLocalDate("tm_timeto").takeIf { it != null && it.isAfter(LocalDate.now()) }.toString()
+                } else if (tr > 0) row.getLocalDate("tm_timeto").toString() else null
             )
         } catch (e: Exception) {
             Log.warn("Exception while parsing ExtService; ${e.message}")
