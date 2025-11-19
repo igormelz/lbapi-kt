@@ -12,7 +12,6 @@ import ru.openfs.lbapi.domain.agreement.model.ExtService
 import ru.openfs.lbapi.domain.agreement.model.RentByPeriod
 import ru.openfs.lbapi.domain.agreement.model.ServiceInfo
 import java.time.LocalDate
-import java.util.Date
 
 @ApplicationScoped
 class DbAdapter(
@@ -157,38 +156,38 @@ WHERE v.archive = 0 AND v.agrm_id = ?
         }
 
     fun mapService(row: Row): ExtService? {
-        if(row.getInteger("need_calc") == 0) return null
+        if (row.getInteger("need_calc") == 0) return null
         return try {
-                val rp = row.getInteger("rent_period")
-                val rpm = row.getInteger("rent_period_month")
-                val tr = row.getDouble("tm_rent")
-                ExtService(
-                    descr = row.getString("descr"),
-                    rent = if(tr > 0) tr else row.getDouble("above"),
-                    rentPeriod = mapRentPeriod(rp, rpm),
-                    state = row.getLong("state"),
-                    stateDescr = when (row.getInteger("state")) {
-                        0, 2 -> "отключена"
-                        else -> "включена"
-                    },
-                    nextPayDate = if (rp == 4) {
-                        when (row.getInteger("begin_period")) {
-                            // 0 -> FormatUtil.getDateStartNextMonth()
-                            // 1 -> "договор"
-                            2 -> nextPaymentDate(
-                                startDate = row.getLocalDate("acc_ondate"),
-                                intervalMonths = rpm.toLong()
-                            ).toString()
-                            // 3 -> "подключение"
-                            3 -> nextPaymentDate(
-                                startDate = row.getLocalDate("timefrom"),
-                                intervalMonths = rpm.toLong()
-                            ).toString()
+            val rp = row.getInteger("rent_period")
+            val rpm = row.getInteger("rent_period_month")
+            val tr = row.getDouble("tm_rent")
+            ExtService(
+                descr = row.getString("descr"),
+                rent = if (tr > 0) tr else row.getDouble("above"),
+                rentPeriod = mapRentPeriod(rp, rpm),
+                state = row.getLong("state"),
+                stateDescr = when (row.getInteger("state")) {
+                    0, 2 -> "отключена"
+                    else -> "включена"
+                },
+                nextPayDate = if (rp == 4) {
+                    when (row.getInteger("begin_period")) {
+                        // 0 -> FormatUtil.getDateStartNextMonth()
+                        // 1 -> "договор"
+                        2 -> nextPaymentDate(
+                            startDate = row.getLocalDate("acc_ondate"),
+                            intervalMonths = rpm.toLong()
+                        ).toString()
+                        // 3 -> "подключение"
+                        3 -> nextPaymentDate(
+                            startDate = row.getLocalDate("timefrom"),
+                            intervalMonths = rpm.toLong()
+                        ).toString()
 
-                            else -> null
-                        }
-                    } else row.getLocalDate("tm_timeto").takeIf { it.isAfter(LocalDate.now()) }.toString()
-                )
+                        else -> null
+                    }
+                } else row.getLocalDate("tm_timeto").takeIf { it.isAfter(LocalDate.now()) }.toString()
+            )
         } catch (e: Exception) {
             Log.warn("Exception while parsing ExtService; ${e.message}")
             null

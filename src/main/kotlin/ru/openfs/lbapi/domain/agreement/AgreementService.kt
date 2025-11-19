@@ -1,31 +1,15 @@
 package ru.openfs.lbapi.domain.agreement
 
 import jakarta.enterprise.context.ApplicationScoped
-import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
-import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
-import ru.openfs.lbapi.api3.GetClientAccount
-import ru.openfs.lbapi.api3.GetClientAccountResponse
-import ru.openfs.lbapi.api3.GetClientPromisePayments
-import ru.openfs.lbapi.api3.GetClientPromisePaymentsResponse
-import ru.openfs.lbapi.api3.GetClientStat
-import ru.openfs.lbapi.api3.GetClientStatResponse
-import ru.openfs.lbapi.api3.GetClientVgroups
-import ru.openfs.lbapi.api3.GetClientVgroupsResponse
-import ru.openfs.lbapi.api3.GetRecommendedPayment
-import ru.openfs.lbapi.api3.GetRecommendedPaymentResponse
-import ru.openfs.lbapi.api3.GetVgUserBlockSchedule
-import ru.openfs.lbapi.api3.GetVgUserBlockScheduleResponse
-import ru.openfs.lbapi.api3.SoapFilter
-import ru.openfs.lbapi.api3.SoapGetAccountFilter
-import ru.openfs.lbapi.api3.SoapGetVgUserBlockSchedule
-import ru.openfs.lbapi.api3.SoapStat
+import ru.openfs.lbapi.api3.*
+import ru.openfs.lbapi.common.utils.FormatUtil
+import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
 import ru.openfs.lbapi.domain.agreement.model.AgreementInfo
 import ru.openfs.lbapi.domain.agreement.model.InvoiceData
 import ru.openfs.lbapi.domain.agreement.model.PromiseCredit
 import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
-import ru.openfs.lbapi.common.utils.FormatUtil
-import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
-import ru.openfs.lbapi.domain.agreement.model.ChangeTariff
+import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
+import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 import java.time.LocalDate
 
 @ApplicationScoped
