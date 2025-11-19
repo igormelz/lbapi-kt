@@ -2,7 +2,6 @@ package ru.openfs.lbapi.domain.tarif
 
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
-import ru.openfs.lbapi.domain.agreement.model.ChangeTariff
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 
 @ApplicationScoped
