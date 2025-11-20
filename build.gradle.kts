@@ -29,11 +29,12 @@ dependencies {
     implementation("io.quarkus:quarkus-smallrye-graphql")
     implementation("org.apache.camel.quarkus:camel-quarkus-xpath")
     implementation("io.quarkus:quarkus-rest-client-jackson")
+    implementation("ru.openfs:yookassa-checkout:1.0.0-SNAPSHOT")
     testImplementation("io.quarkus:quarkus-junit5")
 }
 
 group = "ru.openfs"
-version = "1.2.1"
+version = "1.2.2"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

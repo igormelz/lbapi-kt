@@ -16,3 +16,9 @@ class PromisePaymentNotAllowedException(message: String) : RuntimeException(mess
 
 @ErrorCode("E3004")
 class PromisePaymentOverdueException(message: String) : RuntimeException(message)
+
+@ErrorCode("E3005")
+class PaymentAmountLessRequiredException(message: String) : RuntimeException(message)
+
+@ErrorCode("E3006")
+class PaymentException(message: String) : RuntimeException(message)
