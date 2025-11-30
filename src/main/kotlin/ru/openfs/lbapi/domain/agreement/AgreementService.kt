@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.domain.agreement
 
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.common.utils.FormatUtil
@@ -25,6 +26,7 @@ class AgreementService(
                 }
             }
         }.ret.first().agreements.map { agreement ->
+            Log.info("get service info for [${agreement.number}:${agreement.agrmid}]")
             val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
 
             AgreementInfo(
@@ -154,21 +156,5 @@ class AgreementService(
                 this.isConsiderinstallment = true
             }
         }.ret
-
-//    fun getChangeTariff(sessionId: String, agreementId: Long) =
-//        soapAdapter.withSession(sessionId).request<GetClientVgroupsResponse> {
-//            GetClientVgroups().apply {
-//                this.flt = SoapFilter().apply {
-//                    this.agrmid = agreementId
-//                }
-//            }
-//        }.ret.firstOrNull()?.tarrasp?.firstOrNull()?.let {
-//            ChangeTariff(
-//                it.taridnew,
-//                it.tarnewname,
-//                it.rent,
-//                it.changetime
-//            )
-//        }
 
 }

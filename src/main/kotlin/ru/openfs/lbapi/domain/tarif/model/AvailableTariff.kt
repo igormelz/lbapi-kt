@@ -1,0 +1,11 @@
+package ru.openfs.lbapi.domain.tarif.model
+
+data class AvailableTariff(
+    val tarId: Long,
+    val tarDescr: String,
+    val tarRent: Double,
+    val tarName: String? = null,
+    val rateLevel: Int, // 1, 6, 12
+    val shape: Int,
+    val discount: Double? = null,
+)
