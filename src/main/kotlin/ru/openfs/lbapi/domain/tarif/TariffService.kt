@@ -6,6 +6,7 @@ import ru.openfs.lbapi.domain.tarif.model.AvailableTariffDto
 import ru.openfs.lbapi.domain.tarif.model.toDto
 import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
+import java.time.LocalDate
 
 @ApplicationScoped
 class TariffService(
@@ -95,7 +96,7 @@ class TariffService(
         agentId: Long,
         tarIdOld: Long,
         tarIdNew: Long,
-        changeDate: String,
+        changeDate: LocalDate,
         serviceCat: Long?
     ): Long {
         return soapAdapter.withSession(sessionId).request<InsClientTarifsRaspResponse> {
@@ -106,7 +107,7 @@ class TariffService(
                     id = agentId
                     taridnew = tarIdNew
                     taridold = tarIdOld
-                    changetime = changeDate + " 00:00:00"
+                    changetime = changeDate.toString()
                     servcatidx = serviceCat
                 }
             }
