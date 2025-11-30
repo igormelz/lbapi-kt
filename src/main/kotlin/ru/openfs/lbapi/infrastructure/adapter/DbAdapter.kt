@@ -150,7 +150,7 @@ WHERE
                             rentPeriod = rentPeriod,
                             extService = extService,
                             rentSummary = rentSummary,
-                            changeTo = changeTariff
+                            changeTo = changeTariff,
                         )
                     }
                     // keep only valid services
@@ -175,8 +175,8 @@ WHERE
         return row.getLong("trf_tar_id")?.let {
             ExtService(
                 descr = row.getString("trf_descr"),
-                rent = row.getDouble("trf_above"),
-                rentPeriod = mapRentPeriod(row.getInteger("trf_rent_period"), row.getInteger("trf_rent_period_month")),
+                rent = row.getDouble("trf_above") ?: row.getDouble("trf_rent"),
+                rentPeriod = mapRentPeriod(row.getInteger("trf_rent_period") ?: 1, row.getInteger("trf_rent_period_month") ?: 1),
                 nextPayDate = row.getLocalDate("trf_change_date_time").toString(),
                 state = 0,
                 stateDescr = "change"
@@ -263,7 +263,9 @@ WHERE
     fun getAvailableTariffs(tarId: Long): List<AvailableTariff> {
         return client.preparedQuery(
             """
-            SELECT t.tar_id, t.descr, t.descr_full, t.rent, t.rent_as_service, sc.rent_period_month, sc.above, t.shape
+            SELECT 
+                t.tar_id, t.descr, t.descr_full, t.rent, t.rent_as_service, t.shape, 
+                sc.rent_period_month, sc.above, sc.serv_cat_idx 
             FROM (SELECT tar_id FROM tarifs_staff WHERE group_tar_id = ?) ts
             JOIN tarifs t ON t.tar_id = ts.tar_id
             LEFT JOIN service_categories sc ON sc.tar_id = t.tar_id AND sc.service_type = 3 
@@ -288,6 +290,7 @@ WHERE
                             tarRent = it.getDouble("above"),
                             rateLevel = it.getInteger("rent_period_month"),
                             shape = shape,
+                            serviceCat = it.getLong("serv_cat_idx"),
                         )
                     }
                 }

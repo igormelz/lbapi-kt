@@ -26,7 +26,7 @@ class AgreementService(
                 }
             }
         }.ret.first().agreements.map { agreement ->
-            Log.info("get service info for [${agreement.number}:${agreement.agrmid}]")
+            Log.info("get service info for agreement: [${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
             val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
 
             AgreementInfo(

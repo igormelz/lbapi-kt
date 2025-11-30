@@ -4,6 +4,7 @@ import org.eclipse.microprofile.graphql.GraphQLApi
 import org.eclipse.microprofile.graphql.Name
 import org.eclipse.microprofile.graphql.Query
 import ru.openfs.lbapi.domain.tarif.TariffService
+import ru.openfs.lbapi.domain.tarif.model.AvailableTariffDto
 
 @GraphQLApi
 class Tariff(
@@ -28,6 +29,6 @@ class Tariff(
         @Name("sessionId") sessionId: String,
         @Name("vgId") vgId: Long,
         @Name("currentRent") currentRent: Double,
-    ) = service.getTariffByServiceId(sessionId, vgId, currentRent)
+    ): List<AvailableTariffDto> = service.getTariffByServiceId(sessionId, vgId, currentRent)
 
 }

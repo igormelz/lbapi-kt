@@ -2,7 +2,8 @@ package ru.openfs.lbapi.domain.tarif
 
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
-import ru.openfs.lbapi.domain.tarif.model.AvailableTariff
+import ru.openfs.lbapi.domain.tarif.model.AvailableTariffDto
+import ru.openfs.lbapi.domain.tarif.model.toDto
 import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 
@@ -41,15 +42,17 @@ class TariffService(
         }.ret
     }
 
-    fun getTariffByServiceId(sessionId: String, vgId: Long, currentRent: Double): List<AvailableTariff> {
+    fun getTariffByServiceId(sessionId: String, vgId: Long, currentRent: Double): List<AvailableTariffDto> {
         return soapAdapter.withSession(sessionId).request<GetClientVgroupsResponse> {
             GetClientVgroups().apply {
                 flt = SoapFilter().apply {
                     vgid = vgId
                 }
             }
-        }.ret.firstOrNull()?.let {
-            val tariffs = dbAdapter.getAvailableTariffs(it.vgroup.tarifid)
+        }.ret.firstOrNull()?.let { vg ->
+            val currentTariff = vg.vgroup.tarifid
+            val agentId = vg.vgroup.agentid
+            val tariffs = dbAdapter.getAvailableTariffs(currentTariff)
             val tariffsByShape = tariffs.groupBy {
                 shapeName.getOrDefault(it.shape, "PRO")
             }
@@ -57,17 +60,57 @@ class TariffService(
             tariffs.map { t ->
                 val currentShapeName = shapeName.getOrDefault(t.shape, "PRO")
                 val shapeTariffs = tariffsByShape[currentShapeName] ?: emptyList()
-                val rateMap= shapeTariffs.associateBy { it.rateLevel }
-                val yearRate = rateMap[12]?.tarRent
+                val rateMap = shapeTariffs.associateBy { it.rateLevel }
+                val yearRate = rateMap[12]?.tarRent ?: currentRent
                 val monthRate = rateMap[1]?.tarRent ?: currentRent
-                when (t.rateLevel) {
-                    1 -> t.copy(tarName = currentShapeName, discount = yearRate?.let { t.tarRent * 12 - it })
-                    6 -> t.copy(tarName = currentShapeName, discount = yearRate?.let { t.tarRent * 2 - it })
-                    else -> t.copy(tarName = currentShapeName, discount = monthRate.let { it * 12 - t.tarRent })
-                }
+
+                t.toDto(
+                    tarName = currentShapeName,
+                    currentTarId = currentTariff,
+                    agentId = agentId,
+                    discount = when (t.rateLevel) {
+                        1 -> yearRate?.let { t.tarRent * 12 - it }
+                        6 -> yearRate?.let { t.tarRent * 2 - it }
+                        else -> monthRate.let { it * 12 - t.tarRent }
+                    }
+                )
             }
         } ?: emptyList()
     }
 
+    /*
+            return $this->s('insClientTarifsRasp', array(
+            'recordid'   => 0,
+            'vgid'       => $this->param('vgid'),
+            'id'         => $this->vgroup()->vgroup->agentid,
+            'taridnew'   => $this->param('tarid'),
+            'taridold'   => $this->vgroup()->vgroup->tarifid,
+            'changetime' => $this->getChangeTime(),
+            'requestby'  => '',
+            'servcatidx' => $this->param('servcatidx')
+     */
+    fun addTariffSchedule(
+        sessionId: String,
+        vgId: Long,
+        agentId: Long,
+        tarIdOld: Long,
+        tarIdNew: Long,
+        changeDate: String,
+        serviceCat: Long?
+    ): Long {
+        return soapAdapter.withSession(sessionId).request<InsClientTarifsRaspResponse> {
+            InsClientTarifsRasp().apply {
+                `val` = SoapTarifsRasp().apply {
+                    recordid = 0L
+                    vgid = vgId
+                    id = agentId
+                    taridnew = tarIdNew
+                    taridold = tarIdOld
+                    changetime = changeDate + " 00:00:00"
+                    servcatidx = serviceCat
+                }
+            }
+        }.ret
+    }
 
 }
