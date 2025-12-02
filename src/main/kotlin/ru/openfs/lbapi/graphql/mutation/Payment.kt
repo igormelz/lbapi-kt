@@ -17,7 +17,6 @@ class Payment(
         @Name("agreement") agreement: String,
         @Name("amount") amount: Double,
         @Name("sbp") sbp: Boolean?,
-    ): PaymentConfirmation = service.payment(
-        sessionId, agreementId, agreement, amount, sbp == true
-    )
+        @Name("login") login: String?,
+    ): PaymentConfirmation = service.payment(sessionId, agreementId, agreement, amount, sbp == true, login)
 }

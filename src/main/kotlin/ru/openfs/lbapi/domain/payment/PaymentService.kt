@@ -4,17 +4,17 @@ import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import ru.openfs.lbapi.api3.*
+import ru.openfs.lbapi.common.exception.NeedReAuthorizeException
 import ru.openfs.lbapi.common.exception.PaymentAmountLessRequiredException
 import ru.openfs.lbapi.common.exception.PaymentException
 import ru.openfs.lbapi.common.utils.FormatUtil.getDateTimeString
+import ru.openfs.lbapi.domain.account.AccountService
 import ru.openfs.lbapi.domain.payment.model.PaymentConfirmation
 import ru.openfs.lbapi.domain.payment.model.PaymentInfo
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 import ru.openfs.yookassa.checkout.service.YookassaCheckoutService
 import ru.openfs.yookassa.checkout.service.model.YookassaCheckoutRequest
 import ru.openfs.yookassa.checkout.service.model.YookassaCheckoutType
-import java.time.LocalDate
-import java.time.Month
 
 @ApplicationScoped
 class PaymentService(
@@ -22,6 +22,7 @@ class PaymentService(
     @param:ConfigProperty(name = "payment-success-url") private val successUrl: String,
     @param:ConfigProperty(name = "payment-description") private val descriptionTemplate: String,
     private val yookassaCheckoutService: YookassaCheckoutService,
+    private val accountService: AccountService,
 ) {
 
     fun getClientPayments(sessionId: String, agreementId: Long, year: Int?): List<PaymentInfo> =
@@ -29,14 +30,14 @@ class PaymentService(
             GetClientPayments().apply {
                 this.flt = SoapFilter().apply {
                     this.agrmid = agreementId
-/*
-                    this.dtfrom = year?.let {
-                        LocalDate.of(it, Month.JANUARY, 1).toString()
-                    } ?: LocalDate.of(LocalDate.now().year, Month.JANUARY, 1).toString()
-                    this.dtto = year?.let {
-                        LocalDate.of(it, Month.DECEMBER, 31).plusDays(1L).toString()
-                    } ?: LocalDate.now().plusDays(1L).toString()
-*/
+                    /*
+                                        this.dtfrom = year?.let {
+                                            LocalDate.of(it, Month.JANUARY, 1).toString()
+                                        } ?: LocalDate.of(LocalDate.now().year, Month.JANUARY, 1).toString()
+                                        this.dtto = year?.let {
+                                            LocalDate.of(it, Month.DECEMBER, 31).plusDays(1L).toString()
+                                        } ?: LocalDate.now().plusDays(1L).toString()
+                    */
                 }
             }
         }.ret.take(10).map {
@@ -54,14 +55,16 @@ class PaymentService(
         agreementId: Long,
         agreementNumber: String,
         amount: Double,
-        sbp: Boolean
+        sbp: Boolean,
+        login: String?,
     ): PaymentConfirmation {
-        Log.info("try payment for [$sessionId], agreement: [$agreementNumber], amount: [$amount]")
+        Log.info("login:[$login] try payment agreement: [$agreementNumber], amount:[$amount], session:[$sessionId]")
         validateAmount(amount)
+        if (login?.isNotBlank() == true) validateClientAgreement(sessionId, login, agreementId)
 
-        return createOrderNumber(sessionId, agreementId, agreementNumber, amount)
+        return createOrderNumber(sessionId, agreementId, amount)
             .let {
-                Log.info("success create order for [$sessionId], agreement: [$agreementNumber], amount: [$amount], order:[$it]")
+                Log.info("login:[$login] success create order:[$it] for agreement:[$agreementNumber], amount:[$amount], session:[$sessionId]")
                 yookassaCheckoutService.checkout(
                     YookassaCheckoutRequest(
                         if (sbp) YookassaCheckoutType.SBP else YookassaCheckoutType.BANK_CARD,
@@ -73,17 +76,17 @@ class PaymentService(
                 )
             }.let {
                 if (it.success) {
-                    Log.info("success create payment for [$sessionId], agreement: [$agreementNumber], amount: [$amount], paymentId:[${it.data.paymentId}]")
+                    Log.info("login:[$login] success create payment:[${it.data.paymentId}] for agreement:[$agreementNumber], amount:[$amount], session:[$sessionId]")
                     PaymentConfirmation(it.data.confirmUrl, it.data.paymentId)
                 } else {
-                    Log.error("error payment for [$sessionId], agreement: [$agreementNumber], amount: [$amount]: ${it.error}")
+                    Log.error("login:[$login] error payment for [$sessionId], agreement:[$agreementNumber], amount:[$amount]: ${it.error}")
                     throw PaymentException(it.error)
                 }
             }
     }
 
     fun getPayment(sessionId: String, paymentId: String): String {
-        Log.info("try get payment for [$sessionId]")
+        Log.info("try get payment for [$paymentId], session:[$sessionId]")
         return yookassaCheckoutService.getStatus(paymentId).let {
             if (it.success) {
                 Log.info("payment for [$sessionId]: ${it.data}")
@@ -100,7 +103,7 @@ class PaymentService(
         else if (amount > 20000) throw PaymentAmountLessRequiredException("required < 20000")
         else true
 
-    private fun createOrderNumber(sessionId: String, agreementId: Long, agreementNumber: String, amount: Double): Long =
+    private fun createOrderNumber(sessionId: String, agreementId: Long, amount: Double): Long =
         soapAdapter.withSession(sessionId).request<InsPrePaymentResponse> {
             InsPrePayment().apply {
                 this.`val` = SoapPrePayment().apply {
@@ -117,5 +120,17 @@ class PaymentService(
         descriptionTemplate
             .replace("{orderNumber}", orderNumber.toString())
             .replace("{agreementNumber}", agreementNumber)
+
+    private fun validateClientAgreement(sessionId: String, login: String, agreementId: Long): Boolean {
+        val hasAgreement = accountService
+            .getClientAccount(sessionId)?.let { account ->
+                account.account.login == login && account.agreements.any { it.agrmid == agreementId }
+            } == true
+
+        if (hasAgreement) return true
+
+        Log.error("No agreement $agreementId for login [$login] in session $sessionId")
+        throw NeedReAuthorizeException("No agreement $agreementId for login [$login] in session $sessionId")
+    }
 
 }

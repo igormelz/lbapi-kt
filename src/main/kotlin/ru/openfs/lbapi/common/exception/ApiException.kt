@@ -22,3 +22,6 @@ class PaymentAmountLessRequiredException(message: String) : RuntimeException(mes
 
 @ErrorCode("E3006")
 class PaymentException(message: String) : RuntimeException(message)
+
+@ErrorCode("E3333")
+class NeedReAuthorizeException(message: String) : RuntimeException(message)
