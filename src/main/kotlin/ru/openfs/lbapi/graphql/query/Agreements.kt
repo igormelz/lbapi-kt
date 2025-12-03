@@ -11,6 +11,9 @@ class Agreements(
     private val service: AgreementService,
 ) {
     @Query
-    fun getAgreementsInfo(@Name("sessionId") sessionId: String): List<AgreementInfo> =
-        service.getAgreementsInfo(sessionId)
+    fun getAgreementsInfo(
+        @Name("sessionId") sessionId: String,
+        @Name("login") login: String?,
+    ): List<AgreementInfo> =
+        service.getAgreementsInfo(sessionId, login)
 }

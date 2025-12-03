@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.domain.promisepayment
 
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 import ru.openfs.lbapi.api3.ClientPromisePayment
@@ -29,11 +30,13 @@ class PromisePaymentService(
     }
 
     fun promisePayment(sessionId: String, agreementId: Long, amount: Double): Boolean =
-        soapAdapter.withSession(sessionId).request<ClientPromisePaymentResponse> {
+        (soapAdapter.withSession(sessionId).request<ClientPromisePaymentResponse> {
             ClientPromisePayment().apply {
                 agrm = agreementId
                 summ = amount
             }
-        }.ret == 1L
+        }.ret == 1L).also {
+            Log.info("Promise payment $amount for $agreementId, session:[$sessionId]")
+        }
 
 }

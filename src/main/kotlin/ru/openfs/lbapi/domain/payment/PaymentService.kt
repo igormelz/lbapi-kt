@@ -60,7 +60,7 @@ class PaymentService(
     ): PaymentConfirmation {
         Log.info("login:[$login] try payment agreement: [$agreementNumber], amount:[$amount], session:[$sessionId]")
         validateAmount(amount)
-        if (login?.isNotBlank() == true) validateClientAgreement(sessionId, login, agreementId)
+        validateClientAgreement(sessionId, login, agreementId)
 
         return createOrderNumber(sessionId, agreementId, amount)
             .let {
@@ -121,11 +121,10 @@ class PaymentService(
             .replace("{orderNumber}", orderNumber.toString())
             .replace("{agreementNumber}", agreementNumber)
 
-    private fun validateClientAgreement(sessionId: String, login: String, agreementId: Long): Boolean {
+    private fun validateClientAgreement(sessionId: String, login: String?, agreementId: Long): Boolean {
         val hasAgreement = accountService
-            .getClientAccount(sessionId)?.let { account ->
-                account.account.login == login && account.agreements.any { it.agrmid == agreementId }
-            } == true
+            .getClientAccount(sessionId, login).agreements
+            .any { it.agrmid == agreementId }
 
         if (hasAgreement) return true
 

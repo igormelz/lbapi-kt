@@ -5,7 +5,7 @@ import ru.openfs.lbapi.api3.GetClientAccount
 import ru.openfs.lbapi.api3.GetClientAccountResponse
 import ru.openfs.lbapi.api3.SoapAccountFull
 import ru.openfs.lbapi.api3.SoapGetAccountFilter
-import ru.openfs.lbapi.common.exception.ApiException
+import ru.openfs.lbapi.common.exception.NeedReAuthorizeException
 import ru.openfs.lbapi.domain.account.model.Account
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 
@@ -22,14 +22,16 @@ class AccountService(
         }
     }
 
-    fun getClientAccount(sessionId: String): SoapAccountFull? =
+    fun getClientAccount(sessionId: String, login: String?): SoapAccountFull =
         soapAdapter.withSession(sessionId)
-            .request<GetClientAccountResponse> { clientAccount }.ret.firstOrNull()
+            .request<GetClientAccountResponse> { clientAccount }.ret.first().let {
+                if(!login.isNullOrBlank() && it.account.login != login) {
+                    throw NeedReAuthorizeException("login [$login] diff than [${it.account.login}], session:[$sessionId]")
+                } else it
+            }
 
-    fun getAccount(sessionId: String): Account =
-        getClientAccount(sessionId)
-            ?.let { mapAccountFromApi(it) }
-            ?: throw ApiException("not found client account")
+    fun getAccount(sessionId: String, login: String?): Account =
+        mapAccountFromApi(getClientAccount(sessionId, login))
 
     private fun mapAccountFromApi(soap: SoapAccountFull): Account =
         Account(

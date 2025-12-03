@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.domain.blocking
 
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 import ru.openfs.lbapi.api3.DelVgUserBlockSchedule
@@ -69,12 +70,16 @@ class BlockingService(
                     // this.parentid = 0L ???
                 }
             }
-        }.ret
+        }.ret.also {
+            Log.info("set block schedule startDate:[$startDate] endDate:[$endDate] session:[$sessionId]")
+        }
 
     fun delVgUserBlockSchedule(sessionId: String, recordId: Long): Long =
         soapAdapter.withSession(sessionId).request<DelVgUserBlockScheduleResponse> {
             DelVgUserBlockSchedule().apply {
                 this.id = recordId
             }
-        }.ret
+        }.ret.also {
+            Log.info("remove block schedule session:[$sessionId]")
+        }
 }

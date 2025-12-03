@@ -20,30 +20,28 @@ class AgreementService(
     private val soapAdapter: SoapAdapter,
     private val accountService: AccountService,
 ) {
-    fun getAgreementsInfo(sessionId: String): List<AgreementInfo> =
-        accountService.getClientAccount(sessionId)?.let { account ->
-            account.agreements.map { agreement ->
-                Log.info("login:[${account.account.login}] get service for agreement:[${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
-                val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
+    fun getAgreementsInfo(sessionId: String, login: String?): List<AgreementInfo> =
+        accountService.getClientAccount(sessionId, login).agreements.map { agreement ->
+            Log.info("login:[${login}] get service for agreement:[${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
+            val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
 
-                AgreementInfo(
-                    id = agreement.agrmid,
-                    number = agreement.number,
-                    createDate = agreement.date,
-                    balance = agreement.balance,
-                    recPaymentAmount = getRecommendedPayment(sessionId, agreement.agrmid),
-                    promiseCreditAmount = agreement.promisecredit,
-                    isCredit = agreement.paymentmethod == 1L,
-                    creditLimitAmount = agreement.credit,
-                    serviceInfo = serviceInfo,
-                    promiseCredit = getPromiseCredit(
-                        sessionId,
-                        agreement.agrmid
-                    ).takeIf { agreement.promisecredit != 0.0 },
-                    activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id),
-                )
-            }
-        } ?: emptyList()
+            AgreementInfo(
+                id = agreement.agrmid,
+                number = agreement.number,
+                createDate = agreement.date,
+                balance = agreement.balance,
+                recPaymentAmount = getRecommendedPayment(sessionId, agreement.agrmid),
+                promiseCreditAmount = agreement.promisecredit,
+                isCredit = agreement.paymentmethod == 1L,
+                creditLimitAmount = agreement.credit,
+                serviceInfo = serviceInfo,
+                promiseCredit = getPromiseCredit(
+                    sessionId,
+                    agreement.agrmid
+                ).takeIf { agreement.promisecredit != 0.0 },
+                activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id),
+            )
+        }
 
     private fun getPromiseCredit(sessionId: String, agreementId: Long): PromiseCredit? =
         soapAdapter.withSession(sessionId).request<GetClientPromisePaymentsResponse> {
