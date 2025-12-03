@@ -6,7 +6,7 @@ import ru.openfs.lbapi.api3.GetClientAccountResponse
 import ru.openfs.lbapi.api3.SoapAccountFull
 import ru.openfs.lbapi.api3.SoapGetAccountFilter
 import ru.openfs.lbapi.common.exception.NeedReAuthorizeException
-import ru.openfs.lbapi.domain.account.model.Account
+import ru.openfs.lbapi.domain.account.model.AccountDto
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 
 @ApplicationScoped
@@ -30,11 +30,11 @@ class AccountService(
                 } else it
             }
 
-    fun getAccount(sessionId: String, login: String?): Account =
+    fun getAccount(sessionId: String, login: String?): AccountDto =
         mapAccountFromApi(getClientAccount(sessionId, login))
 
-    private fun mapAccountFromApi(soap: SoapAccountFull): Account =
-        Account(
+    private fun mapAccountFromApi(soap: SoapAccountFull): AccountDto =
+        AccountDto(
             uid = soap.account.uid,
             login = soap.account.login,
             name = soap.account.abonentname,

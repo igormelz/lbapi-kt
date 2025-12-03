@@ -1,6 +1,6 @@
 package ru.openfs.lbapi.domain.account.model
 
-data class Account(
+data class AccountDto(
     val login: String,
     val uid: Long,
     val name: String,
