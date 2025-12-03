@@ -135,35 +135,6 @@ WHERE
             }.await().indefinitely().firstOrNull()
     }
 
-    fun mapChangeTariffById(row: Row): ExtService? {
-        return row.getLong("ttr_rent")?.let {
-            ExtService(
-                descr = row.getString("ttr_descr"),
-                rent = row.getDouble("ttr_rent"),
-                rentPeriod = MONTHLY,
-                nextPayDate = row.getLocalDate("ttr_change_date_time").toString(),
-                state = 0,
-                stateDescr = "change"
-            )
-        }
-    }
-
-    fun mapChangeTariff(row: Row): ExtService? {
-        return row.getLong("trf_tar_id")?.let {
-            ExtService(
-                descr = row.getString("trf_descr"),
-                rent = row.getDouble("trf_above") ?: row.getDouble("trf_rent"),
-                rentPeriod = mapRentPeriod(
-                    row.getInteger("trf_rent_period") ?: 1,
-                    row.getInteger("trf_rent_period_month") ?: 1
-                ),
-                nextPayDate = row.getLocalDate("trf_change_date_time").toString(),
-                state = 0,
-                stateDescr = "change"
-            )
-        }
-    }
-
     private fun mapRentPeriod(rp: Int, rpm: Int): String =
         when (rp) {
             0 -> "разовое"
