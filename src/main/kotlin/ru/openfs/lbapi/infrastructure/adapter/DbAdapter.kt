@@ -69,17 +69,7 @@ SELECT
 	va.address,
 	sc.begin_period,
 	s.activated,
-	s.timefrom,
-	tr.tar_id_new AS trf_tar_id,
-	tr.change_time AS trf_change_date_time,
-	trf.rent AS trf_rent,
-	trf.descr AS trf_descr,
-	tsc.above AS trf_above,
-	tsc.rent_period AS trf_rent_period,
-	tsc.rent_period_month AS trf_rent_period_month,
- 	ttr.change_time AS ttr_change_date_time,
- 	t2.rent as ttr_rent,
- 	t2.descr as ttr_descr
+	s.timefrom
 FROM
 	billing.vgroups v
 INNER JOIN billing.tarifs t ON
@@ -97,17 +87,6 @@ left join billing.tariff_modifiers tm on
 LEFT JOIN billing.service_categories sc ON
 	sc.serv_cat_idx = s.serv_cat_idx
 	AND v.tar_id = sc.tar_id
-LEFT JOIN billing.tarifs_rasp tr ON
-	v.vg_id = tr.vg_id
-LEFT JOIN billing.tarifs trf ON
-	trf.tar_id = tr.tar_id_new
-LEFT JOIN billing.service_categories tsc ON
-	tsc.serv_cat_idx = tr.serv_cat_idx
-	AND tsc.tar_id = tr.tar_id_new 
-LEFT JOIN billing.tarifs_rasp ttr on
- 	ttr.tar_id = t.tar_id
- LEFT JOIN billing.tarifs t2 on
- 	t2.tar_id = ttr.tar_id_new
 WHERE
 	v.archive = 0
 	AND v.agrm_id = ?
@@ -134,9 +113,7 @@ WHERE
                                     rentAmount = rent.sum()
                                 )
                             }
-                        val changeTariff =
-                            rows.map { mapChangeTariff(it) }.firstOrNull() ?: rows.map { mapChangeTariffById(it) }
-                                .firstOrNull()
+
                         ServiceInfo(
                             id = k, // vg_id
                             login = row.getString("login"),
@@ -150,7 +127,7 @@ WHERE
                             rentPeriod = rentPeriod,
                             extService = extService,
                             rentSummary = rentSummary,
-                            changeTo = changeTariff,
+                            changeTo = null,
                         )
                     }
                     // keep only valid services
@@ -176,7 +153,10 @@ WHERE
             ExtService(
                 descr = row.getString("trf_descr"),
                 rent = row.getDouble("trf_above") ?: row.getDouble("trf_rent"),
-                rentPeriod = mapRentPeriod(row.getInteger("trf_rent_period") ?: 1, row.getInteger("trf_rent_period_month") ?: 1),
+                rentPeriod = mapRentPeriod(
+                    row.getInteger("trf_rent_period") ?: 1,
+                    row.getInteger("trf_rent_period_month") ?: 1
+                ),
                 nextPayDate = row.getLocalDate("trf_change_date_time").toString(),
                 state = 0,
                 stateDescr = "change"
@@ -295,6 +275,32 @@ WHERE
                     }
                 }
             }.await().indefinitely()
+    }
+
+    fun getScheduledChangeTariffs(vgId: Long): List<ExtService> {
+        return client.preparedQuery(
+            """
+            SELECT 
+	            tr.state, tr.request_by, tr.tar_id_new, tr.change_time, 
+                t.rent, t.rent_as_service, t.descr,
+                sc.above, sc.rent_period, sc.rent_period_month
+            FROM
+	            tarifs_rasp tr INNER JOIN tarifs t ON t.tar_id = tr.tar_id_new
+                LEFT JOIN service_categories sc ON sc.serv_cat_idx = tr.serv_cat_idx AND sc.tar_id = tr.tar_id_new
+            WHERE tr.vg_id = ?
+        """.trimIndent()
+        ).execute(Tuple.of(vgId)).map { rows ->
+            rows.map {
+                ExtService(
+                    descr = it.getString("descr"),
+                    rent = it.getDouble("above") ?: it.getDouble("rent"),
+                    rentPeriod = mapRentPeriod(it.getInteger("rent_period") ?: 1, it.getInteger("rent_period_month") ?: 1),
+                    state = it.getLong("state"),
+                    stateDescr = it.getInteger("request_by")?.let { "manager" } ?: "user",
+                    nextPayDate = it.getLocalDate("change_time").toString()
+                )
+            }
+        }.await().indefinitely()
     }
 
 }

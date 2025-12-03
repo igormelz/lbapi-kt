@@ -23,7 +23,15 @@ class AgreementService(
     fun getAgreementsInfo(sessionId: String, login: String?): List<AgreementInfo> =
         accountService.getClientAccount(sessionId, login).agreements.map { agreement ->
             Log.info("login:[${login}] get service for agreement:[${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
+
             val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
+                ?.let { group ->
+                    dbAdapter.getScheduledChangeTariffs(group.id)
+                        .firstOrNull()
+                        ?.let { change -> group.copy(changeTo = change) }
+                        ?: group
+                }
+
 
             AgreementInfo(
                 id = agreement.agrmid,
