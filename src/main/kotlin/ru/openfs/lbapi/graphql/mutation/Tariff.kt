@@ -27,9 +27,10 @@ class Tariff(
         return service.addTariffSchedule(sessionId, vgId, agentId, tarIdOld, tarIdNew, fromDate, serviceCat)
     }
 
-//    @Mutation
-//    fun removeUserBlock(
-//        @Name("sessionId") sessionId: String,
-//        @Name("recordId") id: Long
-//    ) = service.delVgUserBlockSchedule(sessionId, id)
+    @Mutation
+    fun deleteChangeTariff(
+        @Name("sessionId") sessionId: String,
+        @Name("recordId") id: Long
+    ) = service.deleteTariffSchedule(sessionId, id)
+
 }

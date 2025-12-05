@@ -1,5 +1,6 @@
 package ru.openfs.lbapi.domain.tarif
 
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.domain.tarif.model.AvailableTariffDto
@@ -99,6 +100,7 @@ class TariffService(
         changeDate: LocalDate,
         serviceCat: Long?
     ): Long {
+        Log.info("add tariff schedule for [$vgId] from [$tarIdOld] to [$tarIdNew] on [$changeDate] with session:[$sessionId]")
         return soapAdapter.withSession(sessionId).request<InsClientTarifsRaspResponse> {
             InsClientTarifsRasp().apply {
                 `val` = SoapTarifsRasp().apply {
@@ -110,6 +112,18 @@ class TariffService(
                     changetime = changeDate.toString()
                     servcatidx = serviceCat
                 }
+            }
+        }.ret
+    }
+
+    fun deleteTariffSchedule(
+        sessionId: String,
+        recordId: Long
+    ): Long {
+        Log.info("remove tariff schedule for [$recordId] with session:[$sessionId]")
+        return soapAdapter.withSession(sessionId).request<DelClientTarifsRaspResponse> {
+            DelClientTarifsRasp().apply {
+                id = recordId
             }
         }.ret
     }

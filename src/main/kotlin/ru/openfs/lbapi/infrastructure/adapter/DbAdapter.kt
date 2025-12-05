@@ -252,7 +252,7 @@ WHERE
         return client.preparedQuery(
             """
             SELECT 
-	            tr.state, tr.request_by, tr.tar_id_new, tr.change_time, 
+	            tr.record_id, tr.state, tr.request_by, tr.tar_id_new, tr.change_time, 
                 t.rent, t.rent_as_service, t.descr,
                 sc.above, sc.rent_period, sc.rent_period_month
             FROM
@@ -266,7 +266,7 @@ WHERE
                     descr = it.getString("descr"),
                     rent = it.getDouble("above") ?: it.getDouble("rent"),
                     rentPeriod = mapRentPeriod(it.getInteger("rent_period") ?: 1, it.getInteger("rent_period_month") ?: 1),
-                    state = it.getLong("state"),
+                    state = it.getLong("record_id"),
                     stateDescr = it.getInteger("request_by")?.let { "manager" } ?: "user",
                     nextPayDate = it.getLocalDate("change_time").toString()
                 )
