@@ -70,8 +70,8 @@ class TariffService(
                     currentTarId = currentTariff,
                     agentId = agentId,
                     discount = when (t.rateLevel) {
-                        1 -> yearRate?.let { t.tarRent * 12 - it }
-                        6 -> yearRate?.let { t.tarRent * 2 - it }
+                        1 -> yearRate.let { t.tarRent * 12 - it }
+                        6 -> monthRate.let { it * 6 - t.tarRent }
                         else -> monthRate.let { it * 12 - t.tarRent }
                     }
                 )
