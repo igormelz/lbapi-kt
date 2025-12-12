@@ -21,6 +21,7 @@ class PaymentService(
     private val soapAdapter: SoapAdapter,
     @param:ConfigProperty(name = "payment-success-url") private val successUrl: String,
     @param:ConfigProperty(name = "payment-description") private val descriptionTemplate: String,
+    @param:ConfigProperty(name = "payment-upper-limit") private val upperLimit: Double,
     private val yookassaCheckoutService: YookassaCheckoutService,
     private val accountService: AccountService,
 ) {
@@ -100,7 +101,7 @@ class PaymentService(
 
     private fun validateAmount(amount: Double): Boolean =
         if (amount <= 0) throw PaymentAmountLessRequiredException("required > 1")
-        else if (amount > 20000) throw PaymentAmountLessRequiredException("required < 20000")
+        else if (amount > upperLimit) throw PaymentAmountLessRequiredException("required < $upperLimit")
         else true
 
     private fun createOrderNumber(sessionId: String, agreementId: Long, amount: Double): Long =
