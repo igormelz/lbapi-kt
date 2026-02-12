@@ -42,3 +42,8 @@ data class ServiceInfo(
     val rentSummary: List<RentByPeriod>,
     val changeTo: ExtService?,
 )
+
+data class Agreement(
+    val id: Long,
+    val number: String,
+)

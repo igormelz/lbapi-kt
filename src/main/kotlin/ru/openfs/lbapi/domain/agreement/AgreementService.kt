@@ -3,12 +3,11 @@ package ru.openfs.lbapi.domain.agreement
 import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
+import ru.openfs.lbapi.common.exception.AgreementNotFound
 import ru.openfs.lbapi.common.utils.FormatUtil
 import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
 import ru.openfs.lbapi.domain.account.AccountService
-import ru.openfs.lbapi.domain.agreement.model.AgreementInfo
-import ru.openfs.lbapi.domain.agreement.model.InvoiceData
-import ru.openfs.lbapi.domain.agreement.model.PromiseCredit
+import ru.openfs.lbapi.domain.agreement.model.*
 import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
 import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
@@ -20,6 +19,51 @@ class AgreementService(
     private val soapAdapter: SoapAdapter,
     private val accountService: AccountService,
 ) {
+
+    fun getAgreements(sessionId: String, login: String?): List<Agreement> {
+        return accountService.getClientAccount(sessionId, login).agreements.map {
+            Agreement(it.agrmid, it.number)
+        }
+    }
+
+    fun getAgreementInfo(sessionId: String, login: String?, agreementNumber: String): AgreementInfo {
+        Log.info("login:[${login}] get service for agreement:[${agreementNumber}], session:[${sessionId}]")
+        return accountService.getClientAccount(sessionId, login)
+            .agreements.find { it.number == agreementNumber }
+            ?.let { agreement ->
+                val serviceInfo = getServiceInfo(agreement.agrmid)
+                val recPayment = getRecommendedPayment(sessionId, agreement.agrmid)
+                val promiseCredit =
+                    getPromiseCredit(sessionId, agreement.agrmid).takeIf { agreement.promisecredit != 0.0 }
+                val activeUserBlock = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id)
+
+                AgreementInfo(
+                    id = agreement.agrmid,
+                    number = agreement.number,
+                    createDate = agreement.date,
+                    balance = agreement.balance,
+                    recPaymentAmount = recPayment,
+                    promiseCreditAmount = agreement.promisecredit,
+                    isCredit = agreement.paymentmethod == 1L,
+                    creditLimitAmount = agreement.credit,
+                    serviceInfo = serviceInfo,
+                    promiseCredit = promiseCredit,
+                    activeUserBlockSchedule = activeUserBlock,
+                )
+
+            } ?: throw AgreementNotFound("not found agreement:[${agreementNumber}]")
+    }
+
+    private fun getServiceInfo(agreementId: Long): ServiceInfo? {
+        return dbAdapter.getVGroupsAndServices(agreementId)
+            ?.let { group ->
+                dbAdapter.getScheduledChangeTariffs(group.id)
+                    .firstOrNull()
+                    ?.let { change -> group.copy(changeTo = change) }
+                    ?: group
+            }
+    }
+
     fun getAgreementsInfo(sessionId: String, login: String?): List<AgreementInfo> =
         accountService.getClientAccount(sessionId, login).agreements.map { agreement ->
             Log.info("login:[${login}] get service for agreement:[${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
@@ -31,7 +75,6 @@ class AgreementService(
                         ?.let { change -> group.copy(changeTo = change) }
                         ?: group
                 }
-
 
             AgreementInfo(
                 id = agreement.agrmid,
