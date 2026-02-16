@@ -16,6 +16,9 @@ class TariffService(
 ) {
 
     private val shapeName = mapOf(
+        10 to "START",
+        30 to "START+",
+        50 to "LIGHT",
         100 to "PRO",
         200 to "PREMIUM",
         300 to "MEGA",
