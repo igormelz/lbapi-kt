@@ -56,11 +56,11 @@ class TariffService(
             val agentId = vg.vgroup.agentid
             val tariffs = dbAdapter.getAvailableTariffs(currentTariff)
             val tariffsByShape = tariffs.groupBy {
-                shapeName.getOrDefault(it.shape, "PRO")
+                resolveShapeName(it.tarDescr, it.shape )
             }
 
             tariffs.map { t ->
-                val currentShapeName = shapeName.getOrDefault(t.shape, "PRO")
+                val currentShapeName =  resolveShapeName(t.tarDescr, t.shape )
                 val shapeTariffs = tariffsByShape[currentShapeName] ?: emptyList()
                 val rateMap = shapeTariffs.associateBy { it.rateLevel }
                 val yearRate = rateMap[12]?.tarRent ?: currentRent
@@ -79,6 +79,17 @@ class TariffService(
             }
         } ?: emptyList()
     }
+
+    private fun resolveShapeName(description: String, shape: Int): String =
+        when {
+            description.endsWith("LITE-F") -> "LITE" // 50
+            description.endsWith("ULTRA-F") -> "ULTRA" // 700
+            description.endsWith("SMART-F") -> "SMART" // 100
+            description.endsWith("DRIVE-F") -> "DRIVE" // 200
+            // default mapping
+            else -> shapeName.getOrDefault(shape, "PRO")
+        }
+
 
     /*
             return $this->s('insClientTarifsRasp', array(
