@@ -6,7 +6,7 @@ import org.eclipse.microprofile.graphql.Mutation
 import org.eclipse.microprofile.graphql.Name
 import ru.openfs.lbapi.domain.blocking.BlockingService
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 @GraphQLApi
 class UserBlock(
@@ -19,8 +19,8 @@ class UserBlock(
         @Name("startDate") startDate: String,
         @Name("endDate") endDate: String,
     ): Long {
-        val fromDate = Instant.parse(startDate).atZone(ZoneOffset.systemDefault()).toLocalDate()
-        val toDate = Instant.parse(endDate).atZone(ZoneOffset.systemDefault()).toLocalDate()
+        val fromDate = Instant.parse(startDate).atZone(ZoneId.of("Europe/Moscow")).toLocalDate()
+        val toDate = Instant.parse(endDate).atZone(ZoneId.of("Europe/Moscow")).toLocalDate()
         Log.info("try block: ${vgId} from: $startDate [$fromDate], to: $endDate [$toDate]")
         return service.setUserBlockSchedule(sessionId, vgId, fromDate, toDate)
     }
