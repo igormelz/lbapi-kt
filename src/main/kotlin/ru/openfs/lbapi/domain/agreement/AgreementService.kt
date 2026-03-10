@@ -86,7 +86,7 @@ class AgreementService(
                 recPaymentAmount = recAmount,
                 promiseCreditAmount = agreement.promisecredit,
                 isCredit = agreement.paymentmethod == 1L,
-                creditLimitAmount = calcSuggestPayment(agreement.balance, recAmount, serviceInfo?.rentSummary?.first { it.rentPeriod == "в мес." }?.rentAmount ?: 0.0),
+                creditLimitAmount = calcSuggestPayment(agreement.balance, recAmount, serviceInfo?.rentSummary?.firstOrNull { it.rentPeriod == "в мес." }?.rentAmount ?: 0.0),
                 serviceInfo = serviceInfo,
                 promiseCredit = getPromiseCredit(
                     sessionId,
