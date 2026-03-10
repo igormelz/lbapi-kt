@@ -6,6 +6,7 @@ import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.common.exception.AgreementNotFound
 import ru.openfs.lbapi.common.utils.FormatUtil
 import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
+import ru.openfs.lbapi.common.utils.FormatUtil.roundToTwoDecimals
 import ru.openfs.lbapi.domain.account.AccountService
 import ru.openfs.lbapi.domain.agreement.model.*
 import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
@@ -76,15 +77,16 @@ class AgreementService(
                         ?: group
                 }
 
+            val recAmount = getRecommendedPayment(sessionId, agreement.agrmid).roundToTwoDecimals()
             AgreementInfo(
                 id = agreement.agrmid,
                 number = agreement.number,
                 createDate = agreement.date,
-                balance = agreement.balance,
-                recPaymentAmount = getRecommendedPayment(sessionId, agreement.agrmid),
+                balance = agreement.balance.roundToTwoDecimals(),
+                recPaymentAmount = recAmount,
                 promiseCreditAmount = agreement.promisecredit,
                 isCredit = agreement.paymentmethod == 1L,
-                creditLimitAmount = agreement.credit,
+                creditLimitAmount = calcSuggestPayment(agreement.balance, recAmount, serviceInfo?.rentSummary?.first { it.rentPeriod == "в мес." }?.rentAmount ?: 0.0),
                 serviceInfo = serviceInfo,
                 promiseCredit = getPromiseCredit(
                     sessionId,
@@ -206,5 +208,12 @@ class AgreementService(
                 this.isConsiderinstallment = true
             }
         }.ret
+
+    private fun calcSuggestPayment(balance: Double, recAmount: Double, rent: Double): Double {
+        return when {
+            recAmount > 0.0 -> recAmount + rent
+            else -> rent - balance
+        }
+    }
 
 }

@@ -1,5 +1,7 @@
 package ru.openfs.lbapi.common.utils
 
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -27,7 +29,7 @@ object FormatUtil {
     fun getTomorrowDate() = LocalDate.now().plusDays(1L).toString()
     fun getDateStartNextMonth() = LocalDate.now().plusMonths(1L).withDayOfMonth(1).toString()
     fun String.isDateTimeAfterNow() = LocalDateTime.parse(this, DATE_TIME_PATTERN).isAfter(LocalDateTime.now())
-    fun getDateTimeString() = DATE_TIME_PATTERN.format(LocalDateTime.now())
+    fun getDateTimeString(): String? = DATE_TIME_PATTERN.format(LocalDateTime.now())
 
     fun nextPaymentDate(
         startDate: LocalDate,
@@ -58,5 +60,10 @@ object FormatUtil {
         } else {
             normalizedLast
         }
+    }
+
+    fun Double.roundToTwoDecimals(): Double {
+        val bd = BigDecimal(this).setScale(2, RoundingMode.HALF_UP)
+        return if (bd.compareTo(BigDecimal.ZERO) == 0) 0.0 else bd.toDouble()
     }
 }

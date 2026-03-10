@@ -33,6 +33,7 @@ class BlockingService(
                 }
             }
         }.ret.firstOrNull()?.let {
+            Log.info("name:${it.name}, descr:${it.descr}, agrmondays:${it.agrmondays}, beginfrom:${it.beginfrom}, beginto:${it.beginto}, usecount:${it.usecount}, useperiod:${it.useperiod}")
             UserBlockTemplate(
                 it.durationmin,
                 it.durationmax,
@@ -40,7 +41,6 @@ class BlockingService(
                 it.positivebalance == 1L
             )
         }
-
     fun getUserBlockSchedules(sessionId: String, agreementId: Long, vgId: Long): List<UserBlockSchedule> =
         soapAdapter.withSession(sessionId).request<GetVgUserBlockScheduleResponse> {
             GetVgUserBlockSchedule().apply {
