@@ -21,7 +21,7 @@ class UserBlock(
     ): Long {
         val fromDate = Instant.parse(startDate).atZone(ZoneId.of("Europe/Moscow")).toLocalDate()
         val toDate = Instant.parse(endDate).atZone(ZoneId.of("Europe/Moscow")).toLocalDate()
-        Log.info("try block: ${vgId} from: $startDate [$fromDate], to: $endDate [$toDate]")
+        Log.info("try block: [$vgId] from: $startDate [$fromDate], to: $endDate [$toDate], session:[$sessionId]")
         return service.setUserBlockSchedule(sessionId, vgId, fromDate, toDate)
     }
 

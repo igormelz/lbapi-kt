@@ -6,7 +6,7 @@ import org.eclipse.microprofile.graphql.Mutation
 import org.eclipse.microprofile.graphql.Name
 import ru.openfs.lbapi.domain.tarif.TariffService
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 @GraphQLApi
 class Tariff(
@@ -22,8 +22,8 @@ class Tariff(
         @Name("tarId") tarIdNew: Long,
         @Name("serviceCat") serviceCat: Long?
     ): Long {
-        val fromDate = Instant.parse(startDate).atZone(ZoneOffset.systemDefault()).toLocalDate()
-        Log.info("try change tariff ${vgId} from: $fromDate to: $tarIdNew")
+        val fromDate = Instant.parse(startDate).atZone(ZoneId.of("Europe/Moscow")).toLocalDate()
+        Log.info("try change tariff [$vgId] from: $startDate [$fromDate], to: [$tarIdNew], session:[$sessionId]")
         return service.addTariffSchedule(sessionId, vgId, agentId, tarIdOld, tarIdNew, fromDate, serviceCat)
     }
 
