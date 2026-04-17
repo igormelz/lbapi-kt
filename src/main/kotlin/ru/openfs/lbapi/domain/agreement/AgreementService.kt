@@ -73,8 +73,15 @@ class AgreementService(
                 ?.let { group ->
                     dbAdapter.getScheduledChangeTariffs(group.id)
                         .firstOrNull()
-                        ?.let { change -> group.copy(changeTo = change) }
-                        ?: group
+                        ?.let { change ->
+                            // fix rent summary
+                            val rentSum = group.rentSummary.map {
+                                if(it.rentPeriod == change.rentPeriod && group.extService.any { s -> s.rentPeriod == change.rentPeriod && s.rent == change.rent }) {
+                                    it.copy(rentAmount = it.rentAmount - change.rent)
+                                } else it
+                            }
+                            group.copy(changeTo = change, rentSummary = rentSum)
+                        } ?: group
                 }
 
             val recAmount = getRecommendedPayment(sessionId, agreement.agrmid).roundToTwoDecimals()
@@ -86,7 +93,11 @@ class AgreementService(
                 recPaymentAmount = recAmount,
                 promiseCreditAmount = agreement.promisecredit,
                 isCredit = agreement.paymentmethod == 1L,
-                creditLimitAmount = calcSuggestPayment(agreement.balance, recAmount, serviceInfo?.rentSummary?.firstOrNull { it.rentPeriod == "в мес." }?.rentAmount ?: 0.0),
+                creditLimitAmount = calcSuggestPayment(
+                    agreement.balance,
+                    recAmount,
+                    serviceInfo?.rentSummary?.firstOrNull { it.rentPeriod == "в мес." }?.rentAmount ?: 0.0
+                ),
                 serviceInfo = serviceInfo,
                 promiseCredit = getPromiseCredit(
                     sessionId,
