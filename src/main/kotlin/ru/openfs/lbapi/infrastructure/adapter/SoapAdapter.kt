@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import org.apache.camel.ProducerTemplate
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import ru.openfs.lbapi.api3.ClientLogin
+import ru.openfs.lbapi.api3.Login
 import ru.openfs.lbapi.common.exception.ApiException
 import ru.openfs.lbapi.common.exception.NotAuthorizeException
 import ru.openfs.lbapi.common.exception.NotfoundAccountException
@@ -35,6 +36,12 @@ class SoapAdapter(
             },
             String::class.java
         ).first ?: throw NotAuthorizeException("not return sessionId")
+
+    fun startServiceSession(login: String, password: String): String =
+        getResponseAsMandatoryType(null, Login().apply {
+            this.login = login
+            this.pass = password
+        }, String::class.java).first ?: throw NotAuthorizeException("bad service auth")
 
     fun <T> getResponseAsMandatoryType(
         sessionId: String?,
