@@ -96,12 +96,21 @@ WHERE
                 rows.groupBy { it.getLong("vg_id") }
                     .map { (k, rows) ->
                         val row = rows.first()
+                        // resolve rent period
                         val rentPeriod = when {
                             row.getString("tarName").contains("полугодовой") -> "за 6 мес."
                             row.getString("tarName").contains("годовой") -> "в год"
                             else -> MONTHLY
                         }
-                        val tarRent = row.getDouble("tarRent")
+
+                        // calc tar rent with discount
+                        val dbRent = row.getDouble("tarRent")
+                        val dbAmount = row.getDouble("amount")
+                        val tarRent = when {
+                            dbAmount > 0.0 && dbAmount < dbRent -> dbAmount
+                            else -> dbRent
+                        }
+
                         val extService = rows.mapNotNull { mapService(it) }.filter { it.rent > 0 }
 
                         val rentSummary = (listOf(rentPeriod to tarRent) + extService.map { it.rentPeriod to it.rent })
