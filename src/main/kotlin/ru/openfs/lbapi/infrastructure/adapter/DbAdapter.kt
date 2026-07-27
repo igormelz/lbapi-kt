@@ -80,10 +80,8 @@ LEFT JOIN billing.services s ON
 	v.vg_id = s.vg_id
 	AND s.need_calc = 1
 	AND s.state = 3
-left join billing.tariff_modifiers tm on
-	tm.tar_id = t.tar_id
-	and tm.vg_id = v.vg_id
-	and tm.service_id = s.service_id
+left join billing.tariff_modifiers tm on tm.vg_id = v.vg_id
+	and tm.tar_id = t.tar_id or tm.service_id = s.service_id
 LEFT JOIN billing.service_categories sc ON
 	sc.serv_cat_idx = s.serv_cat_idx
 	AND v.tar_id = sc.tar_id
@@ -105,7 +103,7 @@ WHERE
 
                         // calc tar rent with discount
                         val dbRent = row.getDouble("tarRent")
-                        val dbAmount = row.getDouble("amount")
+                        val dbAmount = row.getDouble("tm_rent")
                         val tarRent = when {
                             dbAmount > 0.0 && dbAmount < dbRent -> dbAmount
                             else -> dbRent
