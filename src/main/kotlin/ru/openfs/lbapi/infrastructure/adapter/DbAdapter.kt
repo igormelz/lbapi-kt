@@ -57,6 +57,7 @@ SELECT
 	COALESCE(s.need_calc, 0) AS need_calc,
 	COALESCE(tm.rent, 0) tm_rent,
 	tm.timeto tm_timeto,
+    COALESCE(tm.service_id, 0) service_id,
 	s.state,
 	s.serv_cat_idx,
 	sc.above,
@@ -153,7 +154,7 @@ WHERE
         }
 
     fun mapService(row: Row): ExtService? {
-        if (row.getInteger("need_calc") == 0) return null
+        if (row.getInteger("need_calc") == 0 || row.getInteger("service_id") == 0) return null
         return try {
             val rp = row.getInteger("rent_period")
             val rpm = row.getInteger("rent_period_month")
