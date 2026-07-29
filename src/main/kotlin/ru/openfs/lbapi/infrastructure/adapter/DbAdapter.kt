@@ -39,58 +39,35 @@ class DbAdapter(
     }
 
     fun getVGroupsAndServices(agreementId: Long): ServiceInfo? {
-        return client.preparedQuery(
-            """
-SELECT
-	v.vg_id,
-	v.login,
-	v.blocked,
-	v.amount,
-	v.acc_ondate,
-	t.descr AS tarName,
-	t.descr_full AS tarDescr,
-	t.type AS tarType,
-	t.rent AS tarRent,
-	t.rent_as_service,
-	t.additional,
-	t.shape AS tarShape,
-	COALESCE(s.need_calc, 0) AS need_calc,
-	COALESCE(tm.rent, 0) tm_rent,
-	tm.timeto tm_timeto,
-    COALESCE(tm.service_id, 0) service_id,
-	s.state,
-	s.serv_cat_idx,
-	sc.above,
-	sc.descr,
-	sc.descr_full,
-	sc.rent_period,
-	COALESCE(sc.rent_period_month, 0) as rent_period_month,
-	sc.service_type,
-	COALESCE(sc.dtv_type, 0) AS usecas,
-	va.address,
-	sc.begin_period,
-	s.activated,
-	s.timefrom
-FROM
-	billing.vgroups v
-INNER JOIN billing.tarifs t ON
-	v.tar_id = t.tar_id
-INNER JOIN billing.vgroups_addr va ON
-	v.vg_id = va.vg_id
-LEFT JOIN billing.services s ON
-	v.vg_id = s.vg_id
-	AND s.need_calc = 1
-	AND s.state = 3
-left join billing.tariff_modifiers tm on tm.vg_id = v.vg_id
-	and tm.tar_id = t.tar_id or tm.service_id = s.service_id
-LEFT JOIN billing.service_categories sc ON
-	sc.serv_cat_idx = s.serv_cat_idx
-	AND v.tar_id = sc.tar_id
-WHERE
-	v.archive = 0
-	AND v.agrm_id = ?
-""".trimIndent()
-        ).execute(Tuple.of(agreementId))
+        val sql = """
+            SELECT
+	            v.vg_id, v.login, v.blocked, v.amount, v.acc_ondate, va.address,
+	            t.descr AS tarName, t.type AS tarType, t.rent AS tarRent, t.rent_as_service,
+	            t.shape AS tarShape, COALESCE(s.need_calc, 0) AS need_calc,
+	            COALESCE((SELECT tmd.rent FROM billing.tariff_modifiers tmd where tmd.vg_id = v.vg_id and tmd.tar_id = t.tar_id and tmd.service_id is null),0) as tarDiscount,
+	            COALESCE(tm.rent, 0) tm_rent, tm.timeto tm_timeto,
+	            s.state, s.serv_cat_idx, sc.above, sc.descr, sc.rent_period, 
+                COALESCE(sc.rent_period_month, 0) as rent_period_month, sc.service_type,
+	            COALESCE(sc.dtv_type, 0) AS usecas,	sc.begin_period, s.activated, s.timefrom
+            FROM
+	            billing.vgroups v
+            INNER JOIN billing.tarifs t ON
+	            v.tar_id = t.tar_id
+            INNER JOIN billing.vgroups_addr va ON
+	            v.vg_id = va.vg_id
+            LEFT JOIN billing.services s ON
+	            v.vg_id = s.vg_id
+	            AND s.need_calc = 1
+	            AND s.state = 3
+            LEFT JOIN billing.tariff_modifiers tm ON 
+                tm.vg_id = v.vg_id	and tm.tar_id = t.tar_id and tm.service_id = s.service_id
+            LEFT JOIN billing.service_categories sc ON
+	            sc.serv_cat_idx = s.serv_cat_idx
+	            AND v.tar_id = sc.tar_id
+            WHERE
+	            v.archive = 0 AND v.agrm_id = ?
+        """.trimIndent()
+        return client.preparedQuery(sql).execute(Tuple.of(agreementId))
             .map { rows ->
                 rows.groupBy { it.getLong("vg_id") }
                     .map { (k, rows) ->
@@ -104,7 +81,7 @@ WHERE
 
                         // calc tar rent with discount
                         val dbRent = row.getDouble("tarRent")
-                        val dbAmount = row.getDouble("tm_rent")
+                        val dbAmount = row.getDouble("tarDiscount")
                         val tarRent = when {
                             dbAmount > 0.0 && dbAmount < dbRent -> dbAmount
                             else -> dbRent
@@ -154,7 +131,7 @@ WHERE
         }
 
     fun mapService(row: Row): ExtService? {
-        if (row.getInteger("need_calc") == 0 || row.getInteger("service_id") == 0) return null
+        if (row.getInteger("need_calc") == 0) return null
         return try {
             val rp = row.getInteger("rent_period")
             val rpm = row.getInteger("rent_period_month")
