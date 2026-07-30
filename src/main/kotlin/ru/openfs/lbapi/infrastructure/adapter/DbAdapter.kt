@@ -44,7 +44,7 @@ class DbAdapter(
 	            v.vg_id, v.login, v.blocked, v.amount, v.acc_ondate, va.address,
 	            t.descr AS tarName, t.type AS tarType, t.rent AS tarRent, t.rent_as_service,
 	            t.shape AS tarShape, COALESCE(s.need_calc, 0) AS need_calc,
-	            COALESCE((SELECT tmd.rent FROM billing.tariff_modifiers tmd where tmd.vg_id = v.vg_id and tmd.tar_id = t.tar_id and tmd.service_id is null),0) as tarDiscount,
+	            COALESCE((SELECT tmd.rent FROM billing.tariff_modifiers tmd where tmd.vg_id = v.vg_id and tmd.tar_id = t.tar_id and tmd.service_id is null and tmd.rent is not null),0) as tarDiscount,
 	            COALESCE(tm.rent, 0) tm_rent, tm.timeto tm_timeto,
 	            s.state, s.serv_cat_idx, sc.above, sc.descr, sc.rent_period, 
                 COALESCE(sc.rent_period_month, 0) as rent_period_month, sc.service_type,
