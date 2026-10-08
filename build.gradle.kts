@@ -15,6 +15,8 @@ repositories {
 val quarkusPlatformGroupId: String by project
 val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
+val yookassaVersion = "1.0.0-SNAPSHOT"
+val altchaVersion = "2.1.1"
 
 dependencies {
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:quarkus-camel-bom:${quarkusPlatformVersion}"))
@@ -29,7 +31,8 @@ dependencies {
     implementation("io.quarkus:quarkus-smallrye-graphql")
     implementation("org.apache.camel.quarkus:camel-quarkus-xpath")
     implementation("io.quarkus:quarkus-rest-client-jackson")
-    implementation("ru.openfs:yookassa-checkout:1.0.0-SNAPSHOT")
+    implementation("ru.openfs:yookassa-checkout:$yookassaVersion")
+    implementation("org.altcha:altcha:$altchaVersion")
     testImplementation("io.quarkus:quarkus-junit5")
 }
 
