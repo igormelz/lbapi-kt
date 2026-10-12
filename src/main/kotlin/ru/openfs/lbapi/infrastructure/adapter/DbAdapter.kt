@@ -41,58 +41,42 @@ class DbAdapter(
     fun getVGroupsAndServices(agreementId: Long): ServiceInfo? {
         return client.preparedQuery(
             """
-SELECT
-	v.vg_id,
-	v.login,
-	v.blocked,
-	v.amount,
-	v.acc_ondate,
-	t.descr AS tarName,
-	t.descr_full AS tarDescr,
-	t.type AS tarType,
-	t.rent AS tarRent,
-	t.rent_as_service,
-	t.additional,
-	t.shape AS tarShape,
-	COALESCE(s.need_calc, 0) AS need_calc,
-	COALESCE(tm.rent, 0) tm_rent,
-	tm.timeto tm_timeto,
-    COALESCE(tm.service_id, 0) service_id,
-	s.state,
-	s.serv_cat_idx,
-	sc.above,
-	sc.descr,
-	sc.descr_full,
-	sc.rent_period,
-	COALESCE(sc.rent_period_month, 0) as rent_period_month,
-	sc.service_type,
-	COALESCE(sc.dtv_type, 0) AS usecas,
-	va.address,
-	sc.begin_period,
-	s.activated,
-	s.timefrom
-FROM
-	billing.vgroups v
-INNER JOIN billing.tarifs t ON
-	v.tar_id = t.tar_id
-INNER JOIN billing.vgroups_addr va ON
-	v.vg_id = va.vg_id
-LEFT JOIN billing.services s ON
-	v.vg_id = s.vg_id
-	AND s.need_calc = 1
-	AND s.state = 3
-left join billing.tariff_modifiers tm on tm.vg_id = v.vg_id
-	and tm.tar_id = t.tar_id or tm.service_id = s.service_id
-LEFT JOIN billing.service_categories sc ON
-	sc.serv_cat_idx = s.serv_cat_idx
-	AND v.tar_id = sc.tar_id
-WHERE
-	v.archive = 0
-	AND v.agrm_id = ?
-""".trimIndent()
+        SELECT
+            v.vg_id            				  AS vgId,
+            v.login            		          AS vLogin,
+            v.blocked          				  AS vBlocked,
+            v.acc_ondate       				  AS vOnDate,
+            t.descr            				  AS tarName,
+            t.descr_full       			      AS tarDescr,
+            t.type             			      AS tarType,
+            t.rent             			      AS tarRent,
+            t.rent_as_service  				  AS tarRentAsService,
+            t.shape            				  AS tarShape,
+            s.state            				  AS sState,
+            s.timefrom         				  AS sTimeFrom,
+            COALESCE(s.need_calc, 0)          AS sNeedCalc,
+            COALESCE(tm.rent, 0)              AS tmRent,
+            tm.timefrom                       AS tmTimefrom,
+            tm.timeto                         AS tmTimeto,
+            COALESCE(tm.service_id, 0)        AS tmServiceId,
+            sc.above                          AS scAbove,
+            sc.descr                          AS scDescr,
+            sc.rent_period                    AS scRentPeriod,
+            COALESCE(sc.rent_period_month, 0) AS scRentPeriodMonth,
+            COALESCE(sc.dtv_type, 0)          AS scDtvUsecas,
+            sc.begin_period                   AS scBeginPeriod,
+            va.address                        AS vaAddress
+        FROM billing.vgroups v
+            JOIN billing.tarifs t ON t.tar_id = v.tar_id
+            JOIN billing.vgroups_addr va ON va.vg_id = v.vg_id
+            LEFT JOIN billing.services s ON s.vg_id = v.vg_id AND s.need_calc = 1 AND s.state = 3
+            LEFT JOIN billing.tariff_modifiers tm ON tm.vg_id = v.vg_id AND tm.timeto > NOW() AND (tm.tar_id = t.tar_id OR tm.service_id = s.service_id)
+            LEFT JOIN billing.service_categories sc ON sc.tar_id = v.tar_id AND sc.serv_cat_idx = s.serv_cat_idx
+        WHERE v.archive = 0 AND v.agrm_id = ?
+        """.trimIndent()
         ).execute(Tuple.of(agreementId))
             .map { rows ->
-                rows.groupBy { it.getLong("vg_id") }
+                rows.groupBy { it.getLong("vgId") }
                     .map { (k, rows) ->
                         val row = rows.first()
                         // resolve rent period
@@ -103,14 +87,19 @@ WHERE
                         }
 
                         // calc tar rent with discount
-                        val dbRent = row.getDouble("tarRent")
-                        val dbAmount = row.getDouble("tm_rent")
+                        val dbTarRent = row.getDouble("tarRent")
+                        val dbTmRent = row.getDouble("tmRent")
                         val tarRent = when {
-                            dbAmount > 0.0 && dbAmount < dbRent -> dbAmount
-                            else -> dbRent
+                            // calc discount by tarModifiers
+                            dbTmRent > 0.0 && dbTmRent < dbTarRent -> dbTmRent
+                            else -> dbTarRent
                         }
 
-                        val extService = rows.mapNotNull { mapService(it) }.filter { it.rent > 0 }
+                        // get tariff services
+                        val extService = rows
+                            .filter { row.getInteger("sNeedCalc") != 0 || row.getInteger("tmServiceId") != 0 }
+                            .mapNotNull { mapService(it) }
+                            .filter { it.rent > 0 }
 
                         val rentSummary = (listOf(rentPeriod to tarRent) + extService.map { it.rentPeriod to it.rent })
                             .filter { it.second > 0 }
@@ -124,14 +113,14 @@ WHERE
 
                         ServiceInfo(
                             id = k, // vg_id
-                            login = row.getString("login"),
-                            address = row.getString("address"),
-                            tarType = mapTarType(row.getInteger("tarType"), row.getInteger("usecas")),
+                            login = row.getString("vLogin"),
+                            address = row.getString("vaAddress"),
+                            tarType = mapTarType(row.getInteger("tarType"), row.getInteger("scDtvUsecas")),
                             tarName = row.getString("tarName"),
                             tarShape = convertBpsToReadableFormat(row.getLong("tarShape")),
                             tarRent = tarRent,
-                            blocked = row.getInteger("blocked") != 0,
-                            blockedType = row.getLong("blocked"),
+                            blocked = row.getInteger("vBlocked") != 0,
+                            blockedType = row.getLong("vBlocked"),
                             rentPeriod = rentPeriod,
                             extService = extService,
                             rentSummary = rentSummary,
@@ -154,41 +143,48 @@ WHERE
         }
 
     fun mapService(row: Row): ExtService? {
-        if (row.getInteger("need_calc") == 0 || row.getInteger("service_id") == 0) return null
         return try {
-            val rp = row.getInteger("rent_period")
-            val rpm = row.getInteger("rent_period_month")
-            val tr = row.getDouble("tm_rent")
+            val rp = row.getInteger("scRentPeriod")
+            val rpm = row.getInteger("scRentPeriodMonth")
+            val tr = row.getDouble("tmRent")
+            val servState = row.getLong("sState")
             ExtService(
-                descr = row.getString("descr"),
-                rent = if (tr > 0) tr else row.getDouble("above"),
+                descr = row.getString("scDescr"),
+                rent = if (tr > 0) tr else row.getDouble("scAbove"),
                 rentPeriod = mapRentPeriod(rp, rpm),
-                state = row.getLong("state"),
-                stateDescr = when (row.getInteger("state")) {
-                    0, 2 -> "отключена"
-                    else -> "включена"
+                state = servState,
+                stateDescr = if (servState == 3L) "включена" else "отключена",
+                nextPayDate = when {
+                    rp == 4 -> resolveNextPayDate(row)
+                    tr > 0 -> row.getLocalDate("tmTimeto").toString()
+                    else -> null
                 },
-                nextPayDate = if (rp == 4) {
-                    when (row.getInteger("begin_period")) {
-                        // 0 -> FormatUtil.getDateStartNextMonth()
-                        // 1 -> "договор"
-                        2 -> nextPaymentDate(
-                            startDate = row.getLocalDate("acc_ondate"),
-                            intervalMonths = rpm.toLong()
-                        ).toString()
-                        // 3 -> "подключение"
-                        3 -> nextPaymentDate(
-                            startDate = row.getLocalDate("timefrom"),
-                            intervalMonths = rpm.toLong()
-                        ).toString()
-
-                        else -> null
-                    }
-                } else if (tr > 0) row.getLocalDate("tm_timeto").toString() else null
             )
         } catch (e: Exception) {
             Log.warn("Exception while parsing ExtService; ${e.message}")
             null
+        }
+    }
+
+    private fun resolveNextPayDate(row: Row): String? {
+        val rpm = row.getLong("scRentPeriodMonth")
+        return when (row.getInteger("scBeginPeriod")) {
+            // 0 -> FormatUtil.getDateStartNextMonth()
+            // 1 -> "договор"
+
+            // 2 - дата активации УЗ
+            2 -> nextPaymentDate(
+                startDate = row.getLocalDate("vOnDate"),
+                intervalMonths = rpm
+            ).toString()
+
+            // 3 -> "дата подключения"
+            3 -> nextPaymentDate(
+                startDate = row.getLocalDate("sTimeFrom"),
+                intervalMonths = rpm
+            ).toString()
+
+            else -> null
         }
     }
 
