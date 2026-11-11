@@ -104,6 +104,7 @@ class DbAdapter(
                             .filter { row.getInteger("sNeedCalc") != 0 || row.getInteger("tmServiceId") != 0 }
                             .mapNotNull { mapService(it) }
                             .filter { it.rent > 0 }
+                            .filterNot { it.rent == tarRent }
 
                         val rentSummary = (listOf(rentPeriod to tarRent) + extService.map { it.rentPeriod to it.rent })
                             .filter { it.second >= 0.0 }
