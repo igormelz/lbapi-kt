@@ -56,6 +56,7 @@ class DbAdapter(
             s.timefrom         				  AS sTimeFrom,
             COALESCE(s.need_calc, 0)          AS sNeedCalc,
             COALESCE(tm.rent, 0)              AS tmRent,
+            COALESCE(tm.rate, -1)			  AS tmRate,
             tm.timefrom                       AS tmTimefrom,
             tm.timeto                         AS tmTimeto,
             COALESCE(tm.service_id, 0)        AS tmServiceId,
@@ -88,10 +89,13 @@ class DbAdapter(
 
                         // calc tar rent with discount
                         val dbTarRent = row.getDouble("tarRent")
-                        val dbTmRent = row.getDouble("tmRent")
+                        val dbTmRent = row.getDouble("tmRent").takeIf { it > 0.0 } ?: row.getDouble("tmRate")
                         val tarRent = when {
                             // calc discount by tarModifiers
-                            dbTmRent > 0.0 && dbTmRent < dbTarRent -> dbTmRent
+                            dbTmRent in 0.0..<dbTarRent -> {
+                                Log.info("calc discount: $dbTmRent on $dbTarRent")
+                                dbTmRent
+                            }
                             else -> dbTarRent
                         }
 
@@ -102,7 +106,7 @@ class DbAdapter(
                             .filter { it.rent > 0 }
 
                         val rentSummary = (listOf(rentPeriod to tarRent) + extService.map { it.rentPeriod to it.rent })
-                            .filter { it.second > 0 }
+                            .filter { it.second >= 0.0 }
                             .groupBy({ it.first }, { it.second })
                             .map { (period, rent) ->
                                 RentByPeriod(
