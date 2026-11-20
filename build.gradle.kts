@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.allopen") version "2.2.21"
+    kotlin("jvm") version "2.4.10"
+    kotlin("plugin.allopen") version "2.4.10"
     id("io.quarkus")
     id("com.github.bjornvester.wsdl2java") version "2.0.2"
 }
@@ -12,9 +12,9 @@ repositories {
     mavenLocal()
 }
 
-val quarkusPlatformGroupId: String by project
-val quarkusPlatformArtifactId: String by project
-val quarkusPlatformVersion: String by project
+val quarkusPlatformGroupId = project.findProperty("quarkusPlatformGroupId")
+val quarkusPlatformArtifactId = project.findProperty("quarkusPlatformArtifactId")
+val quarkusPlatformVersion = project.findProperty("quarkusPlatformVersion")
 val yookassaVersion = "1.0.0-SNAPSHOT"
 val altchaVersion = "2.1.1"
 
@@ -37,7 +37,7 @@ dependencies {
 }
 
 group = "ru.openfs"
-version = "1.3.0"
+version = "2.0.0"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

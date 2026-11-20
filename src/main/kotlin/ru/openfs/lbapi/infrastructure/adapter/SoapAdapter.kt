@@ -5,11 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import org.apache.camel.ProducerTemplate
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import ru.openfs.lbapi.api3.ClientLogin
-import ru.openfs.lbapi.common.exception.ApiException
-import ru.openfs.lbapi.common.exception.NotAuthorizeException
-import ru.openfs.lbapi.common.exception.NotfoundAccountException
-import ru.openfs.lbapi.common.exception.PromisePaymentNotAllowedException
-import ru.openfs.lbapi.common.exception.PromisePaymentOverdueException
+import ru.openfs.lbapi.common.exception.*
 import ru.openfs.lbapi.infrastructure.client.LbCoreRestClient
 
 @ApplicationScoped
@@ -36,7 +32,7 @@ class SoapAdapter(
             String::class.java
         ).first ?: throw NotAuthorizeException("not return sessionId")
 
-    fun <T> getResponseAsMandatoryType(
+    fun <T : Any> getResponseAsMandatoryType(
         sessionId: String?,
         request: Any,
         responseType: Class<T>,
@@ -70,12 +66,18 @@ class SoapAdapter(
                         "Promise payment is not available, last payment is overdue" ->
                             throw PromisePaymentOverdueException(err)
 
-                        else -> throw ApiException(err)
+                        else -> throw ApiException(err ?: "Unexpected error")
                     }
                 }
 
-                return response.cookies["sessnum"]?.value?.getSessionId() to
-                        producer.requestBody<T>(CamelSoapAdapter.READ_SOAP_MESSAGE, responseBody, responseType)
+                val parsedResponse: T? = producer.requestBody(
+                    CamelSoapAdapter.READ_SOAP_MESSAGE,
+                    responseBody,
+                    responseType,
+                )
+                if (parsedResponse == null) throw ApiException("Bad read soap response")
+
+                return response.cookies["sessnum"]?.value?.getSessionId() to parsedResponse
             }
         } catch (e: RuntimeException) {
             Log.error(e.message)

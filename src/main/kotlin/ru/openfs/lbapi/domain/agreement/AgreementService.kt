@@ -4,7 +4,6 @@ import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import ru.openfs.lbapi.api3.*
 import ru.openfs.lbapi.common.exception.AgreementNotFound
-import ru.openfs.lbapi.common.utils.FormatUtil
 import ru.openfs.lbapi.common.utils.FormatUtil.isDateTimeAfterNow
 import ru.openfs.lbapi.common.utils.FormatUtil.roundToTwoDecimals
 import ru.openfs.lbapi.domain.account.AccountService
@@ -13,6 +12,10 @@ import ru.openfs.lbapi.domain.blocking.model.UserBlockSchedule
 import ru.openfs.lbapi.infrastructure.adapter.DbAdapter
 import ru.openfs.lbapi.infrastructure.adapter.SoapAdapter
 import java.time.LocalDate
+
+
+// 2L - INDIVIDUAL,
+private const val CORPORATE = 1L
 
 @ApplicationScoped
 class AgreementService(
@@ -29,8 +32,8 @@ class AgreementService(
 
     fun getAgreementInfo(sessionId: String, login: String?, agreementNumber: String): AgreementInfo {
         Log.info("login:[${login}] get service for agreement:[${agreementNumber}], session:[${sessionId}]")
-        return accountService.getClientAccount(sessionId, login)
-            .agreements.find { it.number == agreementNumber }
+        val account = accountService.getClientAccount(sessionId, login)
+        return account.agreements.find { it.number == agreementNumber }
             ?.let { agreement ->
                 val serviceInfo = getServiceInfo(agreement.agrmid)
                 val recPayment = getRecommendedPayment(sessionId, agreement.agrmid)
@@ -50,6 +53,7 @@ class AgreementService(
                     serviceInfo = serviceInfo,
                     promiseCredit = promiseCredit,
                     activeUserBlockSchedule = activeUserBlock,
+                    isBusiness = account.account.isBusiness()
                 )
 
             } ?: throw AgreementNotFound("not found agreement:[${agreementNumber}]")
@@ -65,8 +69,9 @@ class AgreementService(
             }
     }
 
-    fun getAgreementsInfo(sessionId: String, login: String?): List<AgreementInfo> =
-        accountService.getClientAccount(sessionId, login).agreements.map { agreement ->
+    fun getAgreementsInfo(sessionId: String, login: String?): List<AgreementInfo> {
+        val account = accountService.getClientAccount(sessionId, login)
+        return account.agreements.map { agreement ->
             Log.info("login:[${login}] get service for agreement:[${agreement.number}], id:[${agreement.agrmid}], session:[${sessionId}]")
 
             val serviceInfo = dbAdapter.getVGroupsAndServices(agreement.agrmid)
@@ -76,7 +81,7 @@ class AgreementService(
                         ?.let { change ->
                             // fix rent summary
                             val rentSum = group.rentSummary.map {
-                                if(it.rentPeriod == change.rentPeriod && group.extService.any { s -> s.rentPeriod == change.rentPeriod && s.rent == change.rent }) {
+                                if (it.rentPeriod == change.rentPeriod && group.extService.any { s -> s.rentPeriod == change.rentPeriod && s.rent == change.rent }) {
                                     it.copy(rentAmount = it.rentAmount - change.rent)
                                 } else it
                             }
@@ -104,8 +109,13 @@ class AgreementService(
                     agreement.agrmid
                 ).takeIf { agreement.promisecredit != 0.0 },
                 activeUserBlockSchedule = getActiveUserBlockSchedule(sessionId, agreement.agrmid, serviceInfo?.id),
+                isBusiness = account.account.isBusiness()
             )
         }
+    }
+
+    private fun SoapAccount.isBusiness(): Boolean =
+        type == CORPORATE || isSoleproprietor
 
     private fun getPromiseCredit(sessionId: String, agreementId: Long): PromiseCredit? =
         soapAdapter.withSession(sessionId).request<GetClientPromisePaymentsResponse> {
@@ -144,71 +154,71 @@ class AgreementService(
         }
     }
 
-    fun getClientTarStat(
-        sessionId: String,
-        agreementId: Long,
-        vgId: Long,
-        dateFrom: String? = null,
-        dateTo: String? = null
-    ): SoapStat =
-        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
-            GetClientStat().apply {
-                this.flt = SoapFilter().apply {
-                    this.dtfrom = dateFrom ?: FormatUtil.getDateStartMonth()
-                    this.dtto = dateTo ?: FormatUtil.getDateStartNextMonth()
-                    this.agrmid = agreementId
-                    this.vgid = vgId
-                    this.repnum = 14529L
-                    this.repdetail = 0L //?
-                }
-            }
-        }.ret.first()
+//    fun getClientTarStat(
+//        sessionId: String,
+//        agreementId: Long,
+//        vgId: Long,
+//        dateFrom: String? = null,
+//        dateTo: String? = null
+//    ): SoapStat? =
+//        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
+//            GetClientStat().apply {
+//                this.flt = SoapFilter().apply {
+//                    this.dtfrom = dateFrom ?: FormatUtil.getDateStartMonth()
+//                    this.dtto = dateTo ?: FormatUtil.getDateStartNextMonth()
+//                    this.agrmid = agreementId
+//                    this.vgid = vgId
+//                    this.repnum = 14529L
+//                    this.repdetail = 0L //?
+//                }
+//            }
+//        }?.ret?.first()
 
 
-    fun getClientSrvStat(
-        sessionId: String,
-        agreementId: Long,
-        vgId: Long,
-        dateFrom: String? = null,
-        dateTo: String? = null
-    ): SoapStat =
-        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
-            GetClientStat().apply {
-                this.flt = SoapFilter().apply {
-                    this.dtfrom = dateFrom ?: FormatUtil.getDateStartMonth()
-                    this.dtto = dateTo ?: FormatUtil.getDateStartNextMonth()
-                    this.agrmid = agreementId
-                    this.vgid = vgId
-                    this.repnum = 3L
-                    this.repdetail = 1L
-                }
-            }
-        }.ret.first()
+//    fun getClientSrvStat(
+//        sessionId: String,
+//        agreementId: Long,
+//        vgId: Long,
+//        dateFrom: String? = null,
+//        dateTo: String? = null
+//    ): SoapStat? =
+//        soapAdapter.withSession(sessionId).request<GetClientStatResponse> {
+//            GetClientStat().apply {
+//                this.flt = SoapFilter().apply {
+//                    this.dtfrom = dateFrom ?: FormatUtil.getDateStartMonth()
+//                    this.dtto = dateTo ?: FormatUtil.getDateStartNextMonth()
+//                    this.agrmid = agreementId
+//                    this.vgid = vgId
+//                    this.repnum = 3L
+//                    this.repdetail = 1L
+//                }
+//            }
+//        }?.ret?.first()
 
 
-    fun getAgreementStat(sessionId: String, agreementId: Long): List<InvoiceData> =
-        dbAdapter.getVGroups(agreementId).flatMap { vGroup ->
-            getClientTarStat(sessionId, agreementId, vGroup.vgId)
-                .data.map { v ->
-                    InvoiceData(
-                        // vg names: [uid, agrm_id, vg_id, period, tar_id, rent, serv, above, pays]
-                        vgId = v.`val`[2].toLong(),
-                        tarId = v.`val`[4].toLong(),
-                        serviceName = vGroup.descr,
-                        //period = v.`val`[3],
-                        charges = v.`val`[5].toDouble() + v.`val`[6].toDouble() + v.`val`[7].toDouble(),
-                    )
-                } + getClientSrvStat(sessionId, agreementId, vGroup.vgId)
-                .data.map { v ->
-                    InvoiceData(
-                        // srv names: [agent_descr, agent_id, agent_type, agrm_id, amount, ani, cat_idx, charge_flag, curr_symbol, dst_ip, dst_port, duration, src_ip, tar_id, total, vg_id, volume, volume_in, volume_out, zone_descr]
-                        vgId = v.`val`[15].toLong(),
-                        tarId = v.`val`[13].toLong(),
-                        serviceName = v.`val`[19],
-                        charges = v.`val`[4].toDouble(),
-                    )
-                }.filter { it.charges > 0 }
-        }
+//    fun getAgreementStat(sessionId: String, agreementId: Long): List<InvoiceData>? =
+//        dbAdapter.getVGroups(agreementId).flatMap { vGroup ->
+//            getClientTarStat(sessionId, agreementId, vGroup.vgId)
+//                ?.data?.map { v ->
+//                    InvoiceData(
+//                        // vg names: [uid, agrm_id, vg_id, period, tar_id, rent, serv, above, pays]
+//                        vgId = v.`val`[2].toLong(),
+//                        tarId = v.`val`[4].toLong(),
+//                        serviceName = vGroup.descr,
+//                        //period = v.`val`[3],
+//                        charges = v.`val`[5].toDouble() + v.`val`[6].toDouble() + v.`val`[7].toDouble(),
+//                    )
+//                } + getClientSrvStat(sessionId, agreementId, vGroup.vgId)
+//                ?.data?.map { v ->
+//                    InvoiceData(
+//                        // srv names: [agent_descr, agent_id, agent_type, agrm_id, amount, ani, cat_idx, charge_flag, curr_symbol, dst_ip, dst_port, duration, src_ip, tar_id, total, vg_id, volume, volume_in, volume_out, zone_descr]
+//                        vgId = v.`val`[15].toLong(),
+//                        tarId = v.`val`[13].toLong(),
+//                        serviceName = v.`val`[19],
+//                        charges = v.`val`[4].toDouble(),
+//                    )
+//                }?.filter { it.charges > 0 }
+//        }
 
 
     private fun getRecommendedPayment(sessionId: String, agreementId: Long, mode: Long = 3L): Double =

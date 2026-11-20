@@ -14,6 +14,7 @@ data class AgreementInfo(
     val serviceInfo: ServiceInfo?,
     val promiseCredit: PromiseCredit?,
     val activeUserBlockSchedule: UserBlockSchedule?,
+    val isBusiness: Boolean,
 )
 
 data class PromiseCredit(

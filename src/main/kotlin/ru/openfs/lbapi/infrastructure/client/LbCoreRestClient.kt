@@ -13,5 +13,5 @@ fun interface LbCoreRestClient {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    fun call(@CookieParam("sessnum") sessionId: String?, soapBody: String): Response
+    fun call(@CookieParam("sessnum") sessionId: String?, soapBody: String?): Response
 }
